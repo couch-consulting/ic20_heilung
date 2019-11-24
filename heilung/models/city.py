@@ -7,6 +7,19 @@ class City:
     def __init__(self, name, latitude, longitude, population,
                  connections, economy, government, hygiene,
                  awareness, events):
+        """
+        TODO add descriptions for properties here maybe
+        :param name:
+        :param latitude:
+        :param longitude:
+        :param population:
+        :param connections:
+        :param economy:
+        :param government:
+        :param hygiene:
+        :param awareness:
+        :param events:
+        """
         # TODO: Evaluate necessity of preprocessing
         self.name = name
         self.latitude = latitude
@@ -33,3 +46,5 @@ class City:
             city['awareness'],
             city.setdefault('events', list())
         )
+
+# TODO model all possible events and make the city class create the associated event classes? For example outbreak

@@ -23,3 +23,5 @@ class Game:
         edges = [(from_city, to_city) for from_city, city in self.cities.items()
                  for to_city in city.connections]
         self.connections.add_edges_from(edges)
+
+# TODO get list of infected cities
