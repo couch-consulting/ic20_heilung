@@ -14,7 +14,7 @@ def index():
     game = Game(request.json)
 
     # Temporary to monitor round change
-    print(game.round)
+    print(game.state_recap())
 
     # Example for endRound
     action = EndRound().build_action()
