@@ -2,7 +2,7 @@ from flask import Flask, request, abort
 
 from heilung.models import Game
 from heilung.models.actions import EndRound
-
+from heilung.cli_game.play_game import play
 app = Flask(__name__)
 
 
@@ -15,6 +15,9 @@ def index():
 
     # Temporary to monitor round change
     print(game.state_recap())
+
+    # # Example for cli game [tip: adapt timeout of test program]
+    # return play()
 
     # Example for endRound
     action = EndRound().build_action()
