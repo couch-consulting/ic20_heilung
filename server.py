@@ -1,4 +1,4 @@
-from flask import Flask, request, abort, jsonify
+from flask import Flask, request, abort
 
 from heilung.models import Game
 from heilung.models.actions import EndRound
@@ -12,11 +12,13 @@ def index():
         abort(400)
 
     game = Game(request.json)
+
+    # Temporary to monitor round change
     print(game.round)
 
     # Example for endRound
-    action = EndRound()
-    return action.build_action()
+    action = EndRound().build_action()
+    return action
 
 
 if __name__ == '__main__':
