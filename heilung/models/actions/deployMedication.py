@@ -7,7 +7,7 @@ class DeployMedication(Action):
     developed already.
     """
 
-    def __init__(self, pathogen, city):
+    def __init__(self, city, pathogen):
         """
         :param pathogen: pathogen object of the pathogen for which a medication shall be developed
         :param city: city object of the city to which the medication shall be deployed

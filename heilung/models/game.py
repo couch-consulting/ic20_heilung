@@ -44,6 +44,8 @@ class Game:
                           pathogen.mobility, pathogen.duration, pathogen.lethality)
             infected_cities = infected_cities + tmp_string
 
+        # TODO add city events, city stats, city flightpahts
+
         return "\n".join([overview, error, game_events, infected_cities])
 
     def get_infected_cities_with_outbreak(self):
