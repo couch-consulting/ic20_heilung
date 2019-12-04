@@ -1,11 +1,7 @@
 from flask import Flask, request, abort, g
 
 from heilung.models import Game
-from heilung.models.actions import EndRound
-from heilung.cli_game.play_game import play
 from heilung.cli_game.observer import Observer
-from heilung.models import actions
-from heilung.models.events.sub_event.pathogen import Pathogen
 from heilung.builders.action import ActionBuilder
 
 app = Flask(__name__)
@@ -29,9 +25,9 @@ def index():
     action_builder = ActionBuilder(game)
     action_list = action_builder.get_actions()
 
-    response = action_list[-1].build_action()
+    # Example for random iterations
+    response = action_builder.random_action(action_list)
 
-    print(response)
     return response
 
     # obs = Observer(game)

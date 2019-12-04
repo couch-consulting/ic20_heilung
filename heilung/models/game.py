@@ -99,6 +99,14 @@ class Game:
         :return: List[City]
         """
         return [city for _, city in self.cities.items() if not city.connections]
+
+    @property
+    def cities_list(self) -> List[City]:
+        """
+        Builds a list of all cities
+        :return: List[City]
+        """
+        return [city for _, city in self.cities.items()]
     # Pathogens state
 
     @property
