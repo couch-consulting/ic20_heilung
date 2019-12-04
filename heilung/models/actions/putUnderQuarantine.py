@@ -22,3 +22,7 @@ class PutUnderQuarantine(Action):
     @staticmethod
     def get_costs(num_rounds):
         return 10 * num_rounds + 20
+
+    @staticmethod
+    def get_max_rounds(ava_points):
+        return (ava_points - 20) / 10

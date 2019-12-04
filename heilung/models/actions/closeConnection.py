@@ -23,3 +23,7 @@ class CloseConnection(Action):
     @staticmethod
     def get_costs(num_rounds):
         return 3 * num_rounds + 3
+
+    @staticmethod
+    def get_max_rounds(ava_points):
+        return (ava_points - 3) / 3

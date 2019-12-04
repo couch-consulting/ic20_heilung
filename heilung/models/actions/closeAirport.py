@@ -22,3 +22,7 @@ class CloseAirport(Action):
     @staticmethod
     def get_costs(num_rounds):
         return 5 * num_rounds + 15
+
+    @staticmethod
+    def get_max_rounds(ava_points):
+        return (ava_points - 15) / 5

@@ -25,6 +25,9 @@ def index():
     action_builder = ActionBuilder(game)
     action_list = action_builder.get_actions()
 
+    # Pause for testing
+    # input("Press Enter to continue...\n")
+
     response = action_list[-1].build_action()
     print(response)
 

@@ -161,6 +161,16 @@ class Game:
                          event['pathogen']['duration'], event['pathogen']['lethality']) for event in self.events if
                 event['type'] == event_type]
 
+    def get_relevant_pathogens(self, pathogens) -> List[Pathogen]:
+        """
+        Filters out irrelevant pathogens for a given list of pathogens
+        :param pathogens: List[Pathogen]
+        :return: List[Pathogen]
+        """
+        relevant_pathogens = self.pathogens_in_cities
+
+        return [pathogen for pathogen in pathogens if pathogen in relevant_pathogens]
+
     # currently unused but could be useful later
     @property
     def pathogens_without_vaccine(self) -> List[Pathogen]:
@@ -185,13 +195,3 @@ class Game:
         path_list3 = self.pathogens_with_medication
 
         return [pathogen for pathogen in path_list1 if pathogen not in path_list2 + path_list3]
-
-    def get_relevant_pathogens(self, pathogens) -> List[Pathogen]:
-        """
-        Filters out irrelevant pathogens for a given list of pathogens
-        :param pathogens: List[Pathogen]
-        :return: List[Pathogen]
-        """
-        relevant_pathogens = self.pathogens_in_cities
-
-        return [pathogen for pathogen in pathogens if pathogen in relevant_pathogens]
