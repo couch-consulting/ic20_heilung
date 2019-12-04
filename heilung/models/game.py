@@ -14,8 +14,7 @@ class Game:
         self.round = state['round']
         self.outcome = state['outcome']
         self.points = state['points']
-        self.cities = {city[0]: City.from_dict(
-            city[0], city[1]) for city in state['cities'].items()}
+        self.cities = {city[0]: City.from_dict(city[0], city[1]) for city in state['cities'].items()}
         self.events = state.setdefault('events', list())
         self.error = state.setdefault('error', '')
 
@@ -73,6 +72,17 @@ class Game:
         return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
 
     # Following are functions and properties to gather data about the game state TODO decide if refactor
+
+    # Cities state
+    def get_cities_with_pathogen(self, pathogen) -> List[City]:
+        """
+        Build list of cities in which the given pathogen in present
+        :param pathogen: pathogen object
+        :return: List[City]
+        """
+
+        return [city for _, city in self.cities.items() if city.outbreak if
+                city.outbreak.pathogen.name == pathogen.name]
 
     # Pathogens state
 
