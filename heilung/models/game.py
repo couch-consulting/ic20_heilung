@@ -33,15 +33,18 @@ class Game:
         Help function to get a easily human readable output of the current state (filtered for only infected cities)
         :return: String of the state recap
         """
-        overview = "Outcome: %s | Round: %s | Points: %s" % (self.outcome, self.round, self.points)
+        outbreaks = self.outbreaks
+        overview = "\n***** %s Round Overview *****\n" \
+                   "Outcome: %s | Points: %s | Infected Cities: %s | Relevant Pathogens: %s" \
+                   % (self.round, self.outcome, self.points, len(outbreaks), len(self.pathogens_in_cities))
+
         error = "Error MSG: %s" % self.error
         game_events = "Game events: %s" % str(self.events)
         infected_cities = ""
         if not short:
             infected_cities = "-Infected Cities- \n"
-            for city, city.outbreak in self.outbreaks:
+            for city, outbreak in outbreaks:
                 # Build overview of infected city
-                outbreak = city.outbreak
                 pathogen = city.outbreak.pathogen
                 tmp_string = "City Name: %s \n \t SinceRound: %s, Prevalence: %s \n \t Pathogen Name: %s \n \t " \
                              "Infectivity: %s, Mobility: %s, Duration: %s, Lethality: %s \n" % \
@@ -49,15 +52,13 @@ class Game:
                               pathogen.mobility, pathogen.duration, pathogen.lethality)
                 infected_cities = infected_cities + tmp_string
 
-        # TODO add city events, city stats, city flightpahts
-
         return "\n".join([overview, error, game_events, infected_cities])
 
     @property
     def outbreaks(self) -> List[Tuple[City, dict]]:
         """
         [BASIC IMPLEMENTATION]
-        Get a list of all cities in which got an outbreak
+        Get a list of all cities which got an outbreak
         :return: list of city and the outbreak objects
         """
         tmp_list = []
@@ -68,17 +69,129 @@ class Game:
         return tmp_list
 
     @property
-    def encountered_pathogens(self) -> List[Pathogen]:
+    def city_events(self) -> List[Tuple[City, dict]]:
+        return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
+
+    # Following are functions and properties to gather data about the game state TODO decide if refactor
+
+    # Pathogens state
+
+    @property
+    def pathogens_in_cities(self) -> List[Pathogen]:
+        """
+        Build a list of pathogens which are infecting cities currently
+        :return: List[Pathogen]
+        """
+        pathogen_names_in_cities = list({outbreak.pathogen.name for _, outbreak in self.outbreaks})
+        return [pathogen for pathogen in self.pathogens_encountered if pathogen.name in pathogen_names_in_cities]
+
+    @property
+    def pathogens_encountered(self) -> List[Pathogen]:
         """
         Builds a list of already encountered pathogens
         :return: List[Pathogen]
         """
-        return [Pathogen(event['pathogen']['name'], event['pathogen']['infectivity'], event['pathogen']['mobility'],
-                         event['pathogen']['duration'], event['pathogen']['lethality']) for event in self.events if
-                event['type'] == 'pathogenEncountered']
+        return self.pathogens_events_sub_list('pathogenEncountered')
 
     @property
-    def city_events(self) -> List[Tuple[City, dict]]:
-        return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
+    def pathogens__with_developing_vaccine(self) -> List[Pathogen]:
+        """
+        Builds a list of pathogens for which a vaccine is in development
+        :return: List[Pathogen]
+        """
+        return self.pathogens_events_sub_list('vaccineInDevelopment')
 
-# TODO get list of infected cities
+    @property
+    def pathogens_with_vaccine(self) -> List[Pathogen]:
+        """
+        Builds a list of pathogens for which a vaccine was developed
+        :return: List[Pathogen]
+        """
+        return self.pathogens_events_sub_list('vaccineAvailable')
+
+    @property
+    def pathogens__with_developing_medication(self) -> List[Pathogen]:
+        """
+        Builds a list of pathogens for which a medication is in development
+        :return: List[Pathogen]
+        """
+        return self.pathogens_events_sub_list('medicationInDevelopment')
+
+    @property
+    def pathogens_with_medication(self) -> List[Pathogen]:
+        """
+        Builds a list of pathogens for which a medication was developed
+        :return: List[Pathogen]
+        """
+        return self.pathogens_events_sub_list('medicationAvailable')
+
+    @property
+    def pathogens_in_need_of_medication(self) -> List[Pathogen]:
+        """
+        Get list of pathogens for which the current game still needs to develop medication
+            "needs to" is defined as: It is useful to develop this medication because the pathogen is still an active outbreak in at least one city
+        :return: List[Pathogen]
+        """
+        path_list1 = self.pathogens_in_cities
+        path_list2 = self.pathogens__with_developing_medication
+        path_list3 = self.pathogens_with_medication
+
+        return [pathogen for pathogen in path_list1 if pathogen not in path_list2 + path_list3]
+
+    @property
+    def pathogens_in_need_of_vaccine(self) -> List[Pathogen]:
+        """
+        Get list of pathogens for which the current game still needs to develop vaccines
+            "needs to" is defined as: It is useful to develop this medication because the pathogen is still an active outbreak in at least one city
+        :return: List[Pathogen]
+        """
+        path_list1 = self.pathogens_in_cities
+        path_list2 = self.pathogens__with_developing_vaccine
+        path_list3 = self.pathogens_with_vaccine
+
+        return [pathogen for pathogen in path_list1 if pathogen not in path_list2 + path_list3]
+
+    def pathogens_events_sub_list(self, event_type) -> List[Pathogen]:
+        """
+        Get a list of pathogen objects for the specified event type
+        :param event_type: str
+        :return: List[Pathogen]
+        """
+        return [Pathogen(event['pathogen']['name'], event['pathogen']['infectivity'], event['pathogen']['mobility'],
+                         event['pathogen']['duration'], event['pathogen']['lethality']) for event in self.events if
+                event['type'] == event_type]
+
+    # currently unused but could be useful later
+    @property
+    def pathogens_without_vaccine(self) -> List[Pathogen]:
+        """
+        Get list of pathogens for which no vaccine is or was developed so far
+        :return: List[Pathogen]
+        """
+        path_list1 = self.pathogens_encountered
+        path_list2 = self.pathogens__with_developing_vaccine
+        path_list3 = self.pathogens_with_vaccine
+
+        return [pathogen for pathogen in path_list1 if pathogen not in path_list2 + path_list3]
+
+    @property
+    def pathogens_without_medication(self) -> List[Pathogen]:
+        """
+        Get list of pathogens for which no medication is or was developed so far
+        :return: List[Pathogen]
+        """
+        path_list1 = self.pathogens_encountered
+        path_list2 = self.pathogens__with_developing_medication
+        path_list3 = self.pathogens_with_medication
+
+        return [pathogen for pathogen in path_list1 if pathogen not in path_list2 + path_list3]
+
+    def get_relevant_pathogens(self, pathogens) -> List[Pathogen]:
+        """
+        Filters out irrelevant pathogens for a given list of pathogens
+        :param pathogens: List[Pathogen]
+        :return: List[Pathogen]
+        """
+        relevant_pathogens = self.pathogens_in_cities
+
+        return [pathogen for pathogen in pathogens if pathogen in relevant_pathogens]
