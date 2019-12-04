@@ -7,7 +7,7 @@ class ApplyHygienicMeasures(Action):
 
     def __init__(self, city):
         """
-        :param city: city object of the city that in which hygienic measures should be applied
+        :param city: city object of the city in which hygienic measures should be applied
         """
         action_type = "applyHygienicMeasures"
         parameters = {"city": city.name}
