@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 import networkx as nx
 
 from .city import City
@@ -34,7 +36,7 @@ class Game:
         error = "Error MSG: %s" % self.error
         game_events = "Game events: %s" % str(self.events)
         infected_cities = "-Infected Cities- \n"
-        for city, city.outbreak in self.get_infected_cities_with_outbreak():
+        for city, city.outbreak in self.outbreaks:
             # Build overview of infected city
             outbreak = city.outbreak
             pathogen = city.outbreak.pathogen
@@ -48,7 +50,8 @@ class Game:
 
         return "\n".join([overview, error, game_events, infected_cities])
 
-    def get_infected_cities_with_outbreak(self):
+    @property
+    def outbreaks(self) -> List[Tuple[City, dict]]:
         """
         [BASIC IMPLEMENTATION]
         Get a list of all cities in which got an outbreak
@@ -57,8 +60,13 @@ class Game:
         tmp_list = []
         for _, city in self.cities.items():
             if city.outbreak:
-                tmp_list.append([city, city.outbreak])
+                tmp_list.append((city, city.outbreak))
 
         return tmp_list
+
+    @property
+    def city_events(self) -> List[Tuple[City, dict]]:
+        return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
+
 
 # TODO get list of infected cities

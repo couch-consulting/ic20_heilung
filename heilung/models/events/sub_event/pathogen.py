@@ -15,3 +15,35 @@ class Pathogen:
         self.mobility = mobility
         self.duration = duration
         self.lethality = lethality
+
+    def to_dict(self) -> dict:
+        """Return all values as dict
+
+        Returns:
+            dict -- Represent this object as dictionary
+        """
+        return {
+            'name': self.name,
+            'infectivity': self.infectivity,
+            'mobility': self.mobility,
+            'duration': self.duration,
+            'lethality': self.lethality
+        }
+
+    @classmethod
+    def from_dict(cls, pathogen: dict):
+        """Parse dict object to pathogen object
+
+        Arguments:
+            pathogen {dict} -- A pathogen dict as received in a request
+
+        Returns:
+            [type] -- an instance of this class
+        """
+        return cls(
+            pathogen['name'],
+            pathogen['infectivity'],
+            pathogen['mobility'],
+            pathogen['duration'],
+            pathogen['lethality']
+        )

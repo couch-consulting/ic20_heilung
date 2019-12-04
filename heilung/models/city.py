@@ -71,7 +71,7 @@ class City:
                 pathogen = Pathogen(pathogen['name'], pathogen['infectivity'], pathogen['mobility'],
                                     pathogen['duration'], pathogen['lethality'])
                 outbreak = Outbreak(pathogen, event['sinceRound'], event['prevalence'])
-                tmp_events.append(outbreak)
+                # tmp_events.append(outbreak)
             else:
                 # Default for unknown events
                 tmp_events.append(event)
