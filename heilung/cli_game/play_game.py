@@ -7,6 +7,10 @@ from heilung.models import City
 from heilung.models.events.sub_event.pathogen import Pathogen
 
 
+# Example for cli game [tip: adapt timeout of test program and copy paste possible answers] [warning: ui sucks]
+# Put code below uncommented in server after the print of game state recap
+# return play()
+
 def play():
     print("\n Actions: \n "
           + "[Needed input without brackets] Name of Action [COST] \n"

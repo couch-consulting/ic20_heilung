@@ -4,6 +4,7 @@ from heilung.models import Game
 from heilung.models.actions import EndRound
 from heilung.cli_game.play_game import play
 from heilung.cli_game.observer import Observer
+from heilung.builders.action import ActionBuilder
 app = Flask(__name__)
 
 action_plan = list()
@@ -19,26 +20,26 @@ def index():
     game = Game(request.json)
 
     # Temporary to monitor round change
-    # print(game.state_recap())
+    print(game.state_recap(short=True))
 
-    # # Example for cli game [tip: adapt timeout of test program]
-    # return play()
+    action_builder = ActionBuilder(game)
+    action_list = action_builder.get_actions()
 
-    obs = Observer(game)
+    response = action_list[-1].build_action()
+    print(response)
 
-    global action_plan
-    if len(action_plan) > 0:
-        return action_plan.pop(0).build_action()
+    return response
 
+    # obs = Observer(game)
 
-    action_plan = obs.get_action_plan()
-
-    return action_plan.pop(0).build_action()
-
-    # Example for endRound
-    action = EndRound().build_action()
-    return action
-
+    # global action_plan
+    # if len(action_plan) > 0:
+    #     return action_plan.pop(0).build_action()
+    #
+    #
+    # action_plan = obs.get_action_plan()
+    #
+    # return action_plan.pop(0).build_action()
 
 if __name__ == '__main__':
     app.run()
