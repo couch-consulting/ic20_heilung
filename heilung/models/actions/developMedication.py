@@ -10,7 +10,10 @@ class DevelopMedication(Action):
         """
         :param pathogen: pathogen object of the pathogen for which a medication shall be developed
         """
-        costs = 20
         action_type = "developMedication"
         parameters = {"pathogen": pathogen.name}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(), parameters)
+
+    @staticmethod
+    def get_costs():
+        return 20

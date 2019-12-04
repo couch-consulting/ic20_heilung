@@ -15,7 +15,10 @@ class PutUnderQuarantine(Action):
             num_rounds = 1
 
         # Init
-        costs = 10 * num_rounds + 20
         action_type = "putUnderQuarantine"
         parameters = {"city": city.name, "rounds": num_rounds}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(num_rounds), parameters)
+
+    @staticmethod
+    def get_costs(num_rounds):
+        return 10 * num_rounds + 20

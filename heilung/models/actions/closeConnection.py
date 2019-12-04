@@ -16,7 +16,10 @@ class CloseConnection(Action):
             num_rounds = 1
 
         # Init
-        costs = 3 * num_rounds + 3
         action_type = "closeConnection"
         parameters = {"fromCity": from_city.name, "toCity": to_city.name, "rounds": num_rounds}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(num_rounds), parameters)
+
+    @staticmethod
+    def get_costs(num_rounds):
+        return 3 * num_rounds + 3

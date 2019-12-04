@@ -12,7 +12,10 @@ class DeployMedication(Action):
         :param pathogen: pathogen object of the pathogen for which a medication shall be developed
         :param city: city object of the city to which the medication shall be deployed
         """
-        costs = 10
         action_type = "deployMedication"
         parameters = {"pathogen": pathogen.name, "city": city.name}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(), parameters)
+
+    @staticmethod
+    def get_costs():
+        return 10

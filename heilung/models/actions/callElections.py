@@ -10,7 +10,10 @@ class CallElections(Action):
         """
         :param city: city object of the city in which an election should be called
         """
-        costs = 3
         action_type = "callElections"
         parameters = {"city": city.name}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(), parameters)
+
+    @staticmethod
+    def get_costs():
+        return 3

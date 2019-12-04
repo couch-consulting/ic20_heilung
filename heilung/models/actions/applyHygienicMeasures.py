@@ -9,7 +9,10 @@ class ApplyHygienicMeasures(Action):
         """
         :param city: city object of the city that in which hygienic measures should be applied
         """
-        costs = 3
         action_type = "applyHygienicMeasures"
         parameters = {"city": city.name}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(), parameters)
+
+    @staticmethod
+    def get_costs():
+        return 3

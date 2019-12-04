@@ -6,7 +6,10 @@ class EndRound(Action):
     """
 
     def __init__(self):
-        costs = 0
         action_type = "endRound"
         parameters = {}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(), parameters)
+
+    @staticmethod
+    def get_costs():
+        return 0

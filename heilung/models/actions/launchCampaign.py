@@ -9,7 +9,10 @@ class LaunchCampaign(Action):
         """
         :param city: city object of the city that in which the campaign should be launched
         """
-        costs = 3
         action_type = "launchCampaign"
         parameters = {"city": city.name}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(), parameters)
+
+    @staticmethod
+    def get_costs():
+        return 3

@@ -15,7 +15,10 @@ class CloseAirport(Action):
             num_rounds = 1
 
         # Init
-        costs = 5 * num_rounds + 15
         action_type = "closeAirport"
         parameters = {"city": city.name, "rounds": num_rounds}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(num_rounds), parameters)
+
+    @staticmethod
+    def get_costs(num_rounds):
+        return 5 * num_rounds + 15

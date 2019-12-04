@@ -11,7 +11,10 @@ class DeployVaccine(Action):
         :param city: city object of the city to which the vaccine should be deployed
         :param pathogen: pathogen object
         """
-        costs = 5
         action_type = "deployVaccine"
         parameters = {"pathogen": pathogen.name, "city": city.name}
-        super().__init__(action_type, costs, parameters)
+        super().__init__(action_type, self.get_costs(), parameters)
+
+    @staticmethod
+    def get_costs():
+        return 5
