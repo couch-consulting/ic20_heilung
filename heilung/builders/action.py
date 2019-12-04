@@ -63,7 +63,12 @@ class ActionBuilder:
         if ava_points >= LaunchCampaign.get_costs():
             action_list.append(LaunchCampaign(default_city))
 
-        # TODO check if any of these generate an event in a city and in how far reusage/usage is possible
+        # WARNING
+        # The following city specific action can not be filtered further
+        # since the game state does not incorporated whether it did took place in previous rounds or is still active
+        # Must be solved by the heuristic/action executed by bracktracking
+        # WARNING
+
         # All cities with an outbreak
         possible_cities = self.game.cities_infected
         # Cll cities with an outbreak that have an airport
@@ -79,8 +84,6 @@ class ActionBuilder:
         if ava_points >= CloseConnection.get_costs(1):
             action_list.append(CloseConnection(default_city, default_city, CloseConnection.get_max_rounds(ava_points),
                                                possible_from_cities=alt_pos_cities))
-
-
 
         # End Round is always possible
         action_list.append(EndRound())
