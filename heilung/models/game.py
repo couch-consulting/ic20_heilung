@@ -84,6 +84,21 @@ class Game:
         return [city for _, city in self.cities.items() if city.outbreak if
                 city.outbreak.pathogen.name == pathogen.name]
 
+    @property
+    def cities_infected(self) -> List[City]:
+        """
+        Builds a list of all infected cities
+        :return: List[City]
+        """
+        return [city for _, city in self.cities.items() if city.outbreak]
+
+    @property
+    def cities_without_airport(self) -> List[City]:
+        """
+        Builds a list of all cities without an airport
+        :return: List[City]
+        """
+        return [city for _, city in self.cities.items() if not city.connections]
     # Pathogens state
 
     @property
@@ -181,7 +196,7 @@ class Game:
 
         return [pathogen for pathogen in pathogens if pathogen in relevant_pathogens]
 
-    # currently unused but could be useful later
+    # currently not used but could be useful later
     @property
     def pathogens_without_vaccine(self) -> List[Pathogen]:
         """
