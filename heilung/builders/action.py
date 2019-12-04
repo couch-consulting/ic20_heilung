@@ -32,12 +32,6 @@ class ActionBuilder:
             for pathogen in self.game.pathogens_in_need_of_medication:
                 action_list.append(DevelopMedication(pathogen))
 
-        # TODO add list of possible cities to object and generate in here as well
-
-
-
-
-
         # Get Possible DeployVaccine Actions which are still relevant
         if ava_points >= DeployVaccine.get_costs():
             # Can be deployed as long as a city has an outbreak and uninfected citizens are not immune
@@ -48,11 +42,13 @@ class ActionBuilder:
                                    pathogen not in city.deployed_vaccines]
                 action_list.append(DeployVaccine(default_city, pathogen, possible_cities))
 
+
         # Get Possible DeployMedication Actions which are still relevant
         if ava_points >= DeployMedication.get_costs():
             # Can be deployed as long as a city has infected citizens (e.g. has an outbreak)
             potential_pathogen = self.game.get_relevant_pathogens(self.game.pathogens_with_medication)
             for pathogen in potential_pathogen:
+                # TODO add possible cities here as well and check for is deployed state
                 action_list.append(DeployMedication(default_city, pathogen))
 
         # Written like this in case costs of any of these would change, alternative they could all use the "same" if
