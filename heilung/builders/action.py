@@ -59,15 +59,16 @@ class ActionBuilder:
 
         # Written like this in case costs of any of these would change, alternative they could all use the "same" if
         # Here no indication that these happened in the past exists, and so far these do not actually change values of a city
-        # No need for possible cities since every city is possible
+        # Every city is possible
+        all_cities = self.game.cities_list
         if ava_points >= ApplyHygienicMeasures.get_costs():
-            action_list.append(ApplyHygienicMeasures(default_city))
+            action_list.append(ApplyHygienicMeasures(default_city, possible_cities=all_cities))
         if ava_points >= CallElections.get_costs():
-            action_list.append(CallElections(default_city))
+            action_list.append(CallElections(default_city, possible_cities=all_cities))
         if ava_points >= ExertInfluence.get_costs():
-            action_list.append(ExertInfluence(default_city))
+            action_list.append(ExertInfluence(default_city, possible_cities=all_cities))
         if ava_points >= LaunchCampaign.get_costs():
-            action_list.append(LaunchCampaign(default_city))
+            action_list.append(LaunchCampaign(default_city, possible_cities=all_cities))
 
         # WARNING
         # The following city specific action can not be filtered further
@@ -98,19 +99,20 @@ class ActionBuilder:
 
         return action_list
 
-    def random_action(self, action_list):
+    @staticmethod
+    def random_action(action_list):
         """
         Generate a random action and "fill" values randomly to have a correct action object
         :param action_list: action list created by the function "get_actions"
         :return: JSON of action ready for return to requester
         """
-        all_cities = self.game.cities_list
+
         action = random.choice(action_list)
 
         if isinstance(action, (DeployVaccine, DeployMedication)):
             action.parameters['city'] = random.choice(action.possible_cities).name
         if isinstance(action, (ApplyHygienicMeasures, CallElections, ExertInfluence, LaunchCampaign)):
-            action.parameters['city'] = random.choice(all_cities).name
+            action.parameters['city'] = random.choice(action.possible_cities).name
 
         # No backtracking, due to the idea that it is possible by randomness to take another action
         # Further, go with random number of rounds between min and max

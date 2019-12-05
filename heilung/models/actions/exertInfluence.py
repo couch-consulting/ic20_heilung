@@ -6,10 +6,14 @@ class ExertInfluence(Action):
     Could get worse...
     """
 
-    def __init__(self, city):
+    def __init__(self, city, possible_cities=None):
         """
         :param city: city object of the city in which influence shall be exerted
         """
+        if possible_cities is None:
+            self.possible_cities = []
+        else:
+            self.possible_cities = possible_cities
         action_type = "exertInfluence"
         parameters = {"city": city.name}
         super().__init__(action_type, self.get_costs(), parameters)
