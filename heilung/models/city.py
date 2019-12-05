@@ -1,6 +1,7 @@
 from heilung.models.events.outbreak import Outbreak
 from heilung.models.events.sub_event.pathogen import Pathogen
 
+
 class City:
     """Basic City Object Modeling connections
     """
@@ -11,7 +12,7 @@ class City:
         """
         TODO add descriptions for properties here maybe
         :param name:  [No effect]
-        :param latitude: for Location of the city [Possibly cities close to another can infect each other] TODO TEST
+        :param latitude: for Location of the city
         :param longitude: for Location of the city
         :param population: [could be relevant for heuristic due to bigger cities are more important]
         :param connections: flight path to another city
@@ -65,6 +66,7 @@ class City:
         # Some shortcut vars which can be checked during building
         outbreak = None
         deployed_vaccines = []
+        deployed_medication = []
         for event in events:
             if event['type'] == 'outbreak':
                 # Build Outbreak event
@@ -78,13 +80,19 @@ class City:
                 pathogen = event['pathogen']
                 pathogen = Pathogen(pathogen['name'], pathogen['infectivity'], pathogen['mobility'],
                                     pathogen['duration'], pathogen['lethality'])
-                deployed_vaccines.append(pathogen)
-            else:
-                # Default for unknown events
-                tmp_events.append(event)
+                if pathogen not in deployed_vaccines:
+                    deployed_vaccines.append(pathogen)
+            # Build complete event list anyways to have an addition look at stuff TODO check if observer gets problems due to this
+            tmp_events.append(event)
 
         return tmp_events, outbreak, deployed_vaccines
 
-# TODO next below (test first closeness with seed = 1)
-# kalkulater der checkt ob airport oder connection schließen ein besserer deal ist - city spezfisch
-# bedenke nahe städte die nicht direkt verbunden sind -> test next
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+# TODO next below (test closeness theory with seed = 1)
+# Can an infection spread to a city nearby (location wise by coordinates) without them being connected via flightpath?
+# Assumption: yes
+# Result: Calculate if close airport/connection or putUnderQuarantie is best idea or if one is for sure cheaper than the others
+# Result: See closer cities as potential neighbors/connection for infections and make them more aware/hygienic
+# Possibly cities close to another can infect each other - support evidence: game state where 256 of 260 cities were infected but 16 do not even have an airport
