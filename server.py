@@ -28,6 +28,7 @@ def index():
     # Example for random iterations
     response = action_builder.random_action(action_list)
 
+    # TODO: Check for events with no state indicator in error message
     return response
 
     # obs = Observer(game)
