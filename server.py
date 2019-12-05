@@ -29,7 +29,7 @@ def index():
     response = action_builder.random_action(action_list)
 
     # TODO: Check for events with no state indicator in error message
-    return response
+    return response.build_action()
 
     # obs = Observer(game)
 

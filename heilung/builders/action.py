@@ -73,7 +73,7 @@ class ActionBuilder:
         # WARNING
         # The following city specific action can not be filtered further
         # since the game state does not incorporated whether it did took place in previous rounds or is still active
-        # Must be solved by the heuristic/action executed by bracktracking
+        # Must be solved by the heuristic/action executed by backtracking
         # WARNING
 
         # All cities with an outbreak
@@ -126,4 +126,4 @@ class ActionBuilder:
             action.parameters['toCity'] = random.choice(from_city.connections)
             action.parameters['rounds'] = random.randint(1, action.parameters['rounds'])
 
-        return action.build_action()
+        return action
