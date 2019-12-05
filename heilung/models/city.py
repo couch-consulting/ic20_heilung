@@ -66,7 +66,6 @@ class City:
         # Some shortcut vars which can be checked during building
         outbreak = None
         deployed_vaccines = []
-        deployed_medication = []
         for event in events:
             if event['type'] == 'outbreak':
                 # Build Outbreak event
