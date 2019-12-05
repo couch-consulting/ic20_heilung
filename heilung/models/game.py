@@ -116,7 +116,7 @@ class Game:
         Build a list of pathogens which are infecting cities currently
         :return: List[Pathogen]
         """
-        pathogen_names_in_cities = list({outbreak.pathogen.name for _, outbreak in self.outbreaks})
+        pathogen_names_in_cities = {outbreak.pathogen.name for _, outbreak in self.outbreaks}
         return [pathogen for pathogen in self.pathogens_encountered if pathogen.name in pathogen_names_in_cities]
 
     @property
