@@ -11,6 +11,7 @@ class Observer:
     encountered_pathogens = dict()
     encountered_happenings = dict()
     global_events = dict()
+    planned_executions = dict()
     action_plan = list()
 
     def __init__(self, game: 'Game'):
@@ -35,7 +36,6 @@ class Observer:
             self.global_events[event['type']] = event
 
         self.save_state()
-        return
 
     def load_state(self):
         """load the last observations from disk
@@ -47,7 +47,7 @@ class Observer:
                 self.encountered_happenings = data['encountered_happenings']
                 self.global_events = data['global_events']
 
-        return
+                self.planned_executions = data.get('planned_executions', dict())
 
     def save_state(self):
         """Save observations to disk
@@ -56,30 +56,85 @@ class Observer:
             data = {
                 'encountered_pathogens': self.encountered_pathogens,
                 'encountered_happenings': self.encountered_happenings,
-                'global_events': self.global_events
+                'global_events': self.global_events,
+                'planned_executions': self.planned_executions
             }
             json.dump(data, f, indent=4, sort_keys=True)
-        return
 
     def get_action_plan(self):
-        """Returns a random action
+        """Plans executions to test
         """
-        # Test medication
-        for event in self.game.events:
-            if event['type'] == 'pathogenEncountered':
-                pathogen = event['pathogen']
-                pathogen = Pathogen.from_dict(pathogen)
-                self.action_plan.append(actions.DevelopMedication(pathogen))
-                for _ in range(4):
-                    self.action_plan.append(actions.EndRound())
 
-                for city, outbreak in self.game.outbreaks:
-                    if outbreak.pathogen.name == pathogen.name:
-                        self.action_plan.append(actions.DeployMedication(city, pathogen))
-                        break
+        # Plan 1: Develop Medication/Vaccination + Deploy
+        if 'medication' not in self.planned_executions:
+            for event in self.game.events:
+                if event['type'] == 'pathogenEncountered':
+                    pathogen = event['pathogen']
+                    pathogen = Pathogen.from_dict(pathogen)
+                    self.action_plan.append(actions.DevelopMedication(pathogen))
+                    for _ in range(4):
+                        self.action_plan.append(actions.EndRound())
+
+                    for city, outbreak in self.game.outbreaks:
+                        if outbreak.pathogen.name == pathogen.name:
+                            self.action_plan.append(actions.DeployMedication(city, pathogen))
+                            break
                 break
-        self.plan_finished = True
+
+            self.planned_executions['medication'] = {
+                'pathogen': pathogen.name,
+                'city_before': self.get_city_state(city)
+            }
+
+        elif 'city_after' not in self.planned_executions['medication']:
+            city_name = self.planned_executions['medication']['city_before']['name']
+            self.planned_executions['medication']['city_after'] = self.get_city_state(self.game.cities[city_name])
+
+        elif 'vaccination' not in self.planned_executions:
+            for event in self.game.events:
+                if event['type'] == 'pathogenEncountered':
+                    pathogen = event['pathogen']
+                    pathogen = Pathogen.from_dict(pathogen)
+                    self.action_plan.append(actions.DevelopVaccine(pathogen))
+                    for _ in range(6):
+                        self.action_plan.append(actions.EndRound())
+
+                    for city, outbreak in self.game.outbreaks:
+                        if outbreak.pathogen.name == pathogen.name:
+                            self.action_plan.append(actions.DeployVaccine(city, pathogen))
+                            break
+                break
+
+            self.planned_executions['vaccination'] = {
+                'pathogen': pathogen.name,
+                'city_before': self.get_city_state(city)
+            }
+
+        elif 'city_after' not in self.planned_executions['vaccination']:
+            city_name = self.planned_executions['vaccination']['city_before']['name']
+            self.planned_executions['vaccination'][f'city_after'] = self.get_city_state(self.game.cities[city_name])
+
+
+        # Plan 2: Develop Vaccine + Deploy
 
         self.action_plan.append(actions.EndRound())
-        print(self.action_plan)
+
+        self.save_state()
+
         return self.action_plan
+
+    def get_city_state(self, city):
+
+        return {
+            'name': city.name,
+            'population': city.population,
+            'connections': city.connections,
+            'economy': city.economy,
+            'government': city.government,
+            'hygiene': city.hygiene,
+            'awareness': city.awareness,
+            'outbreak': {
+                'pathogen': city.outbreak.pathogen.name,
+                'prevalence': city.outbreak.prevalence
+            }
+        }

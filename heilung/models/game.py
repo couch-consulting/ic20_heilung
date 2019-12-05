@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import List, Tuple
 
 import networkx as nx
@@ -34,8 +35,8 @@ class Game:
         """
         outbreaks = self.outbreaks
         overview = "\n***** %s Round Overview *****\n" \
-                   "Outcome: %s | Points: %s | Infected Cities: %s | Relevant Pathogens: %s" \
-                   % (self.round, self.outcome, self.points, len(outbreaks), len(self.pathogens_in_cities))
+                   "Outcome: %s | Points: %s | Infected Cities: %s | Relevant Pathogens: %s | Total Population %s" \
+                   % (self.round, self.outcome, self.points, len(outbreaks), len(self.pathogens_in_cities), self.total_population)
 
         error = "Error MSG: %s" % self.error
         game_events = "Game events: %s" % str(self.events)
@@ -60,16 +61,16 @@ class Game:
         Get a list of all cities which got an outbreak
         :return: list of city and the outbreak objects
         """
-        tmp_list = []
-        for _, city in self.cities.items():
-            if city.outbreak:
-                tmp_list.append((city, city.outbreak))
-
-        return tmp_list
+        return [(city, city.outbreak) for _, city in self.cities.items() if city.outbreak]
 
     @property
     def city_events(self) -> List[Tuple[City, dict]]:
         return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
+
+
+    @property
+    def total_population(self) -> int:
+        return reduce(lambda a, b : a + b, [city.population for _, city in self.cities.items()])
 
     # Following are functions and properties to gather data about the game state TODO decide if refactor
 
