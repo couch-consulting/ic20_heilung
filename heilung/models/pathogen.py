@@ -1,3 +1,6 @@
+from heilung.utilities import grade_to_scalar
+
+
 class Pathogen:
     """A Pathogen
     """
@@ -11,10 +14,10 @@ class Pathogen:
         :param lethality: % as categorical value, % of infected citizen dying
         """
         self.name = name
-        self.infectivity = infectivity
-        self.mobility = mobility
-        self.duration = duration
-        self.lethality = lethality
+        self.infectivity = grade_to_scalar(infectivity)
+        self.mobility = grade_to_scalar(mobility)
+        self.duration = grade_to_scalar(duration)
+        self.lethality = grade_to_scalar(lethality)
 
     def to_dict(self) -> dict:
         """Return all values as dict

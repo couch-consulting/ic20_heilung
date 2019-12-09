@@ -3,8 +3,10 @@ from typing import List, Tuple
 
 import networkx as nx
 
-from .city import City
-from .events.sub_event.pathogen import Pathogen
+from heilung.models import City
+from heilung.models.event import Event
+from heilung.models.pathogen import Pathogen
+from heilung.models.events.event_utilities import convert_events
 
 
 class Game:
@@ -16,7 +18,7 @@ class Game:
         self.outcome = state['outcome']
         self.points = state['points']
         self.cities = {city[0]: City.from_dict(city[0], city[1]) for city in state['cities'].items()}
-        self.events = state.setdefault('events', list())
+        self.events = convert_events(state.setdefault('events', list()))
         self.error = state.setdefault('error', '')
 
         # Create a graph of all connections between cities
@@ -39,7 +41,7 @@ class Game:
                    % (self.round, self.outcome, self.points, len(outbreaks), len(self.pathogens_in_cities), self.total_population)
 
         error = "Error MSG: %s" % self.error
-        game_events = "Game events: %s" % str(self.events)
+        game_events = "Game events: %s" % str([event.type for event in self.events])
         infected_cities = ""
         if not short:
             infected_cities = "-Infected Cities- \n"
@@ -191,9 +193,8 @@ class Game:
         :param event_type: str
         :return: List[Pathogen]
         """
-        return [Pathogen(event['pathogen']['name'], event['pathogen']['infectivity'], event['pathogen']['mobility'],
-                         event['pathogen']['duration'], event['pathogen']['lethality']) for event in self.events if
-                event['type'] == event_type]
+        return [event.pathogen for event in self.events if
+                event.type == event_type]
 
     def get_relevant_pathogens(self, pathogens) -> List[Pathogen]:
         """

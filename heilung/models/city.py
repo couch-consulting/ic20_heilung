@@ -1,5 +1,7 @@
-from heilung.models.events.outbreak import Outbreak
-from heilung.models.events.sub_event.pathogen import Pathogen
+from heilung.models.events import Outbreak
+from heilung.models.pathogen import Pathogen
+from heilung.utilities import grade_to_scalar
+from heilung.models.events.event_utilities import convert_events
 
 
 class City:
@@ -28,10 +30,10 @@ class City:
         self.longitude = longitude
         self.population = population
         self.connections = connections
-        self.economy = economy
-        self.government = government
-        self.hygiene = hygiene
-        self.awareness = awareness
+        self.economy = grade_to_scalar(economy)
+        self.government = grade_to_scalar(government)
+        self.hygiene = grade_to_scalar(hygiene)
+        self.awareness = grade_to_scalar(awareness)
         # Get all events
 
         self.events, self.outbreak, self.deployed_vaccines = self.event_builder(events)
@@ -61,27 +63,20 @@ class City:
         """
         # TODO add correct event Builder here after we know all event types for all possible events
         # TODO maybe move into constructor of evnets class
-        # TODO model all possible events and make the city class create the associated event classes? For example outbreak
+        events = convert_events(events)
         tmp_events = []
         # Some shortcut vars which can be checked during building
         outbreak = None
         deployed_vaccines = []
         for event in events:
-            if event['type'] == 'outbreak':
-                # Build Outbreak event
-                pathogen = event['pathogen']
-                # Build Subevent Pathogen
-                pathogen = Pathogen(pathogen['name'], pathogen['infectivity'], pathogen['mobility'],
-                                    pathogen['duration'], pathogen['lethality'])
-                outbreak = Outbreak(pathogen, event['sinceRound'], event['prevalence'])
-                # tmp_events.append(outbreak)
-            elif event['type'] == 'vaccineDeployed':
-                pathogen = event['pathogen']
-                pathogen = Pathogen(pathogen['name'], pathogen['infectivity'], pathogen['mobility'],
-                                    pathogen['duration'], pathogen['lethality'])
-                if pathogen not in deployed_vaccines:
-                    deployed_vaccines.append(pathogen)
-            # Build complete event list anyways to have an addition look at stuff TODO check if observer gets problems due to this
+            if event.type == 'outbreak':
+                outbreak = event
+                continue
+
+            elif event.type == 'vaccineDeployed':
+                if event.pathogen not in deployed_vaccines:
+                    deployed_vaccines.append(event.pathogen)
+
             tmp_events.append(event)
 
         return tmp_events, outbreak, deployed_vaccines

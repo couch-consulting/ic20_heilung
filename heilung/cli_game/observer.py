@@ -2,7 +2,7 @@ from os.path import isfile
 import json
 
 from heilung.models import actions
-from heilung.models.events.sub_event.pathogen import Pathogen
+from heilung.models.pathogen import Pathogen
 
 
 class Observer:
@@ -24,16 +24,13 @@ class Observer:
 
         for city, events in game.city_events:
             for event in events:
-                if isinstance(event, dict):
-                    self.encountered_happenings[event['type']] = event
-                else:
-                    self.encountered_happenings[event.type] = event
+                self.encountered_happenings[event.type] = event.to_dict()
 
         for event in game.events:
-            if event['type'] == 'pathogenEncountered':
-                pathogen = event['pathogen']
-                self.encountered_pathogens[event['pathogen']['name']] = pathogen
-            self.global_events[event['type']] = event
+            if event.type == 'pathogenEncountered':
+                pathogen = event.pathogen
+                self.encountered_pathogens[pathogen.name] = pathogen.to_dict()
+            self.global_events[event.type] = event.to_dict()
 
         self.save_state()
 

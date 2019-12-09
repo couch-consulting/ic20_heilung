@@ -22,6 +22,8 @@ def index():
     # Temporary to monitor round change
     print(game.state_recap(short=True))
 
+    # obs = Observer(game)
+
     action_builder = ActionBuilder(game)
     action_list = action_builder.get_actions()
 
@@ -30,8 +32,6 @@ def index():
 
     # TODO: Check for events with no state indicator in error message
     return response.build_action()
-
-    # obs = Observer(game)
 
     # global action_plan
     # if len(action_plan) > 0:
