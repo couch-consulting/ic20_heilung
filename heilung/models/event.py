@@ -26,4 +26,8 @@ class Event:
         Returns:
             dict -- Event dictionary
         """
+        if 'pathogen' in self.__dict__:
+            copy = self.__dict__.copy()
+            copy['pathogen'] = copy['pathogen'].to_dict()
+            return copy
         return self.__dict__

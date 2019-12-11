@@ -22,7 +22,7 @@ def index():
     # Temporary to monitor round change
     print(game.state_recap(short=True))
 
-    # obs = Observer(game)
+    obs = Observer(game)
 
     action_builder = ActionBuilder(game)
     action_list = action_builder.get_actions()
