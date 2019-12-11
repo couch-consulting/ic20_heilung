@@ -30,17 +30,8 @@ def index():
     # Example for random iterations
     response = action_builder.random_action(action_list)
 
-    # TODO: Check for events with no state indicator in error message
+    # TODO: Check for events with no state indicator in error message (not needed anymore since according event should exist)
     return response.build_action()
-
-    # global action_plan
-    # if len(action_plan) > 0:
-    #     return action_plan.pop(0).build_action()
-    #
-    #
-    # action_plan = obs.get_action_plan()
-    #
-    # return action_plan.pop(0).build_action()
 
 
 if __name__ == '__main__':
