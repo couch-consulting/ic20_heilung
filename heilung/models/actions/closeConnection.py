@@ -3,10 +3,6 @@ from heilung.models.action import Action
 
 class CloseConnection(Action):
     """Hinders pathogens to spread between two specified cities via the flightpath for a specified number of rounds
-
-    WARNINGS - !caution when using this action!:
-        - Can not be done multiple times on the same city but no event or indicator exists which states that it already happened or sinceRounds!
-        - Can only be considered by backtracking
     """
 
     def __init__(self, from_city, to_city, num_rounds, possible_from_cities=None):
