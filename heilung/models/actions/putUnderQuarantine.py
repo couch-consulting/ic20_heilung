@@ -17,7 +17,8 @@ class PutUnderQuarantine(Action):
         if possible_cities is None:
             self.possible_cities = []
         else:
-            self.possible_cities = possible_cities
+            # filter cities which are already under quarantine
+            self.possible_cities = [city for city in possible_cities if not city.under_quarantine]
 
         # default to 1 round quarantine iff false input for num_rounds
         if not isinstance(num_rounds, int) or num_rounds <= 0:

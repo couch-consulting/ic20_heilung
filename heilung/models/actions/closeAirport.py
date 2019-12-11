@@ -17,7 +17,8 @@ class CloseAirport(Action):
         if possible_cities is None:
             self.possible_cities = []
         else:
-            self.possible_cities = possible_cities
+            # Filter every city in which the airport is already closed
+            self.possible_cities = [city for city in possible_cities if not city.airport_closed]
 
         # default to 1 round quarantine iff false input for num_rounds
         if not isinstance(num_rounds, int) or num_rounds <= 0:

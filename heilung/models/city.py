@@ -36,7 +36,8 @@ class City:
         self.awareness = grade_to_scalar(awareness)
         # Get all events
 
-        self.events, self.outbreak, self.deployed_vaccines = self.event_builder(events)
+        self.events, self.outbreak, self.deployed_vaccines, \
+        self.airport_closed, self.under_quarantine, self.closed_connections = self.event_builder(events)
 
     @classmethod
     def from_dict(cls, city_name, city):
@@ -68,6 +69,9 @@ class City:
         # Some shortcut vars which can be checked during building
         outbreak = None
         deployed_vaccines = []
+        airport_closed = False
+        quarantine = False
+        connections_closed = []
         for event in events:
             if event.type == 'outbreak':
                 outbreak = event
@@ -76,10 +80,17 @@ class City:
             elif event.type == 'vaccineDeployed':
                 if event.pathogen not in deployed_vaccines:
                     deployed_vaccines.append(event.pathogen)
+            elif event.type == 'airportClosed':
+                airport_closed = True
+            elif event.type == 'quarantine':
+                quarantine = True
+            elif event.type == 'connectionClosed':
+                connections_closed.append(event.city)
+            tmp_events.append(
+                event)  # TODO maybe here event to dict again such that it does not append objects` addresses but readable dict for debugging
 
-            tmp_events.append(event)
-
-        return tmp_events, outbreak, deployed_vaccines
+        # TODO maybe refactor to something like "shortcuts"-dict which can be accessed
+        return tmp_events, outbreak, deployed_vaccines, airport_closed, quarantine, connections_closed
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__

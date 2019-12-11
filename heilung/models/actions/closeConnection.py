@@ -16,9 +16,13 @@ class CloseConnection(Action):
         :param num_rounds: number of rounds to quarantine the city as a positive integer greater than 0
         """
         if possible_from_cities is None:
-            self.possible_cities = []
+            self.possible_from_cities = []
         else:
-            self.possible_cities = possible_from_cities
+            self.possible_from_cities = possible_from_cities
+            # Get a dict with city name as key and possible connections that are not closed as value
+            connections_from_city = {city.name: [connection for connection in city.connections if connection
+                                                 not in city.closed_connections] for city in possible_from_cities}
+            self.connections_from_city = connections_from_city
 
         # default to 1 round quarantine iff false input for num_rounds
         if not isinstance(num_rounds, int) or num_rounds <= 0:

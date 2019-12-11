@@ -80,6 +80,7 @@ class ActionBuilder:
         possible_cities = self.game.cities_infected
         # All cities with an outbreak that have an airport
         alt_pos_cities = [city for city in possible_cities if city not in self.game.cities_without_airport]
+
         # num_rounds will default to maximum of rounds for available points
         if ava_points >= PutUnderQuarantine.get_costs(1) and possible_cities:
             # possible city for each only cities with an outbreak because any other city would be irrelevant
@@ -89,6 +90,7 @@ class ActionBuilder:
             if ava_points >= CloseAirport.get_costs(1):
                 action_list.append(CloseAirport(default_city, CloseAirport.get_max_rounds(ava_points),
                                                 possible_cities=alt_pos_cities))
+
             if ava_points >= CloseConnection.get_costs(1):
                 action_list.append(
                     CloseConnection(default_city, default_city, CloseConnection.get_max_rounds(ava_points),
@@ -120,10 +122,10 @@ class ActionBuilder:
             action.parameters['city'] = random.choice(action.possible_cities).name
             action.parameters['rounds'] = random.randint(1, action.parameters['rounds'])
         if isinstance(action, CloseConnection):
-            from_city = random.choice(action.possible_cities)
+            from_city = random.choice(action.possible_from_cities)
             action.parameters['fromCity'] = from_city.name
             # select random to connection
-            action.parameters['toCity'] = random.choice(from_city.connections)
+            action.parameters['toCity'] = random.choice(action.connections_from_city[from_city.name])
             action.parameters['rounds'] = random.randint(1, action.parameters['rounds'])
 
         return action
