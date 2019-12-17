@@ -3,6 +3,7 @@ from flask import Flask, request, abort, g
 from heilung.models import Game
 from heilung.cli_game.observer import Observer
 from heilung.builders.action import ActionBuilder
+from heilung.heuristics.human.human import Human
 
 app = Flask(__name__)
 
@@ -27,8 +28,12 @@ def index():
     action_builder = ActionBuilder(game)
     action_list = action_builder.get_actions()
 
+    # Heuristic response
+    human = Human(game)
+    response = human.get_decision()
+
     # Example for random iterations
-    response = action_builder.random_action(action_list)
+    # response = action_builder.random_action(action_list)
 
     return response.build_action()
 
