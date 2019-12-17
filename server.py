@@ -28,12 +28,12 @@ def index():
     action_builder = ActionBuilder(game)
     action_list = action_builder.get_actions()
 
-    # Heuristic response
-    human = Human(game)
-    response = human.get_decision()
+    # # Heuristic response
+    # human = Human(game)
+    # response = human.get_decision()
 
     # Example for random iterations
-    # response = action_builder.random_action(action_list)
+    response = action_builder.random_action(action_list)
 
     return response.build_action()
 
