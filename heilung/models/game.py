@@ -35,36 +35,64 @@ class Game:
         self.cities_list = [city for _, city in self.cities.items()]
         self.biggest_city = max(self.cities_list, key=lambda x: x.population)
 
+    def get_state_dict(self, short=True) -> dict:
+        """
+        Help function to get a dataset summarizing the the current state (filtered for only infected cities)
+        :return: dict of the state recap
+        """
+        data = {
+            'round': self.round,
+            'outcome': self.outcome,
+            'points': self.points,
+            'infected_city_count': len(self.outbreaks),
+            'relevant_pathogens_count': len(self.pathogens_in_cities),
+            'total_population': self.total_population,
+            'relevant_pathogens': [pat.name for pat in self.pathogens_in_cities],
+            'infected_cities': [city.name for city in self.cities_infected],
+            'error': self.error,
+            'game_events': [event.type for event in self.events],
+        }
 
-
+        if not short:
+            infected_cities = list()
+            for city, outbreak in self.outbreaks:
+                infected_city = {
+                    'name': city.name,
+                    'population': city.population,
+                    'connections': city.connections,
+                    'economy': city.economy,
+                    'government': city.government,
+                    'hygiene': city.hygiene,
+                    'awareness': city.awareness,
+                    'outbreak': {
+                        'pathogen': outbreak.pathogen.name,
+                        'prevalence': outbreak.prevalence,
+                        'since_round': outbreak.sinceRound
+                    }
+                }
+                infected_cities.append(infected_city)
+            data['infected_cities'] = infected_cities
+        return data
 
     def state_recap(self, short=False):
         """
         Help function to get a easily human readable output of the current state (filtered for only infected cities)
         :return: String of the state recap
         """
-        outbreaks = self.outbreaks
-        overview = "\n***** %s Round Overview *****\n" \
-                   "Outcome: %s | Points: %s | Infected Cities: %s | Relevant Pathogens: %s | Total Population %s" \
-                   % (self.round, self.outcome, self.points, len(outbreaks), len(self.pathogens_in_cities),
-                      self.total_population)
-        overview += "\n" + str([pat.name for pat in self.pathogens_in_cities])
-        overview += "\n" + str([city.name for city in self.cities_infected])
-        error = "Error MSG: %s" % self.error
-        game_events = "Game events: %s" % str([event.type for event in self.events])
-        infected_cities = ""
-        if not short:
-            infected_cities = "-Infected Cities- \n"
-            for city, outbreak in outbreaks:
-                # Build overview of infected city
-                pathogen = city.outbreak.pathogen
-                tmp_string = "City Name: %s \n \t SinceRound: %s, Prevalence: %s \n \t Pathogen Name: %s \n \t " \
-                             "Infectivity: %s, Mobility: %s, Duration: %s, Lethality: %s \n" % \
-                             (city.name, outbreak.sinceRound, outbreak.prevalence, pathogen.name, pathogen.infectivity,
-                              pathogen.mobility, pathogen.duration, pathogen.lethality)
-                infected_cities = infected_cities + tmp_string
-
-        return "\n".join([overview, error, game_events, infected_cities])
+        recap = self.get_state_dict(short)
+        overview = (
+            f"\n***** {recap['round']} Round Overview *****\n"
+            f"Outcome: {recap['outcome']} | "
+            f"Points: {recap['points']} | "
+            f"Infected Cities: {recap['infected_city_count']} | "
+            f"Relevant Pathogens: {recap['relevant_pathogens_count']} | "
+            f"Total Population: {recap['total_population']}\n"
+            f"Active Pathogens: {recap['relevant_pathogens']}\n"
+            f"Infected Cities: {recap['infected_cities']}\n"
+            f"Error MSG: {recap['error']}\n"
+            f"Game events: {recap['game_events']}"
+        )
+        return overview
 
     @property
     def outbreaks(self) -> List[Tuple[City, dict]]:
