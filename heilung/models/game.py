@@ -5,6 +5,9 @@ import networkx as nx
 
 from heilung.models import City
 from heilung.models.event import Event
+from heilung.models.events.medicationDeployed import MedicationDeployed
+from heilung.models.events.vaccineDeployed import VaccineDeployed
+
 from heilung.models.pathogen import Pathogen
 from heilung.models.events.event_utilities import convert_events
 
@@ -23,9 +26,7 @@ class Game:
 
         # Create a graph of all connections between cities
         self.connections = nx.Graph()
-
         self.connections.add_nodes_from(self.cities.keys())
-
         edges = [(from_city, to_city) for from_city, city in self.cities.items()
                  for to_city in city.connections]
         self.connections.add_edges_from(edges)
@@ -38,8 +39,10 @@ class Game:
         outbreaks = self.outbreaks
         overview = "\n***** %s Round Overview *****\n" \
                    "Outcome: %s | Points: %s | Infected Cities: %s | Relevant Pathogens: %s | Total Population %s" \
-                   % (self.round, self.outcome, self.points, len(outbreaks), len(self.pathogens_in_cities), self.total_population)
-
+                   % (self.round, self.outcome, self.points, len(outbreaks), len(self.pathogens_in_cities),
+                      self.total_population)
+        overview += "\n" + str([pat.name for pat in self.pathogens_in_cities])
+        overview += "\n" + str([city.name for city in self.cities_infected])
         error = "Error MSG: %s" % self.error
         game_events = "Game events: %s" % str([event.type for event in self.events])
         infected_cities = ""
@@ -69,10 +72,9 @@ class Game:
     def city_events(self) -> List[Tuple[City, dict]]:
         return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
 
-
     @property
     def total_population(self) -> int:
-        return reduce(lambda a, b : a + b, [city.population for _, city in self.cities.items()])
+        return reduce(lambda a, b: a + b, [city.population for _, city in self.cities.items()])
 
     # Following are functions and properties to gather data about the game state TODO decide if refactor
 
@@ -110,6 +112,7 @@ class Game:
         :return: List[City]
         """
         return [city for _, city in self.cities.items()]
+
     # Pathogens state
 
     @property
@@ -205,6 +208,51 @@ class Game:
         relevant_pathogens = self.pathogens_in_cities
 
         return [pathogen for pathogen in pathogens if pathogen in relevant_pathogens]
+
+    def get_percentage_of_infected(self, pathogen) -> int:
+        """
+        Get the amount of all currently alive citizen infected by this pathogen
+        :param pathogen: pathogen object
+        :return: % of the infected
+        """
+        total_pop = self.total_population + 1
+        total_infected = sum([city.population * city.outbreak.prevalence for city in self.cities_infected if
+                              city.outbreak.pathogen == pathogen])
+        return 100 / total_pop * total_infected
+
+    def get_percentage_of_immune(self, pathogen) -> int:
+        """
+        (To an extend an heuristic/biased approach to this feature)
+        Get the amount of all currently alive citizen which are not infected in a city with a outbreak and vaccine deployed
+        Whereby the people made immune by medication is assumed to be the worst case estimate
+        :param pathogen: pathogen object
+        :return: % of the infected
+        """
+        total_pop = self.total_population + 1
+
+        # Immune in currently infected cities
+        infected_cities = self.get_cities_with_pathogen(pathogen)
+        total_immune = sum([city.population * (1 - city.outbreak.prevalence) for city in infected_cities if
+                            pathogen in city.deployed_vaccines])
+        # Worst case estimate for medication, only 30% became immune
+        total_immune += sum([city.population * (city.outbreak.prevalence / 0.7 * 0.3) for city in infected_cities if
+                             pathogen in city.deployed_medication])
+
+        # Immune in already "healed" cities
+        non_outbreak_cities = [city for city in self.cities_list if city.outbreak is None]
+        cities_with_vaccine = [city for city in non_outbreak_cities if [True for event in city.events if
+                                                                        isinstance(event,
+                                                                                   VaccineDeployed) and event.pathogen == pathogen]]
+        cities_with_medication_only = [city for city in non_outbreak_cities if
+                                       city not in cities_with_vaccine and [True for event in city.events if
+                                                                            isinstance(event,
+                                                                                       MedicationDeployed) and event.pathogen == pathogen]]
+        # additionally all population of all cities which were infected and are now healed, i.e. pathogen does not exist anymore
+        total_immune += sum([city.population for city in cities_with_vaccine])
+        # if vac not but only medication assume 50% are immune
+        total_immune += sum([city.population * 0.5 for city in cities_with_medication_only])
+
+        return 100 / total_pop * total_immune
 
     # currently not used but could be useful later
     @property
