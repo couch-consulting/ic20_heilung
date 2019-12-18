@@ -7,17 +7,30 @@ DEFAULT_SCALE = 5
 
 
 # Made into own functions to make it easily changeable
-def increase_on_dependency(pat_to_increase, dependent_pathogen):
+def increase_on_dependency(val_to_increase, dependent_val, inverted=False, default_inv=DEFAULT_SCALE):
+    """
+    Increases value
+    :param val_to_decrease:
+    :param dependent_val:
+    :param inverted: for dependencies where small values make the val_to_increase better
+    :param default_inv: normally 5 but for amplified/weighed values this might change to the highest value available for comparison
+    :return:
+    """
     # math.ceil(X/2) makes [0,1,2,3,4,5,...] -> [0,1,1,2,2,3,...]
-    # The higher dependent_pathogen the better pat_to_increase
-    new_value = pat_to_increase + math.ceil(dependent_pathogen / 2)
+    # The higher dependent_val the better val_to_decrease
+
+    if inverted:
+        new_value = val_to_increase + math.ceil(max(default_inv - dependent_val, 1) / 2)
+    else:
+        new_value = val_to_increase + math.ceil(dependent_val / 2)
+
     # no max value
     return new_value
 
 
-def decrease_on_dependency(pat_to_decrease, dependent_pathogen):
-    # The higher dependent_pathogen the worse pat_to_decrease
-    new_value = pat_to_decrease - math.ceil(dependent_pathogen / 2)
+def decrease_on_dependency(val_to_decrease, dependent_val):
+    # The higher dependent_val the worse val_to_decrease
+    new_value = val_to_decrease - math.ceil(dependent_val / 2)
     if new_value < 1:
         # min value is 1
         new_value = 1

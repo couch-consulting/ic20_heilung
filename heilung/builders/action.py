@@ -70,12 +70,6 @@ class ActionBuilder:
         if ava_points >= LaunchCampaign.get_costs():
             action_list.append(LaunchCampaign(default_city, possible_cities=all_cities))
 
-        # WARNING
-        # The following city specific action can not be filtered further
-        # since the game state does not incorporated whether it did took place in previous rounds or is still active
-        # Must be solved by the heuristic/action executed by backtracking
-        # WARNING
-
         # All cities with an outbreak
         possible_cities = self.game.cities_infected
         # All cities with an outbreak that have an airport

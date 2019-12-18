@@ -35,6 +35,14 @@ class Game:
         self.cities_list = [city for _, city in self.cities.items()]
         self.biggest_city = max(self.cities_list, key=lambda x: x.population)
 
+        tmp_pathogen_percentage_of_infected = {}
+        tmp_pathogen_percentage_of_immune = {}
+        for pathogen in self.pathogens_in_cities:
+            tmp_pathogen_percentage_of_infected[pathogen.name] = self._get_percentage_of_infected(pathogen)
+            tmp_pathogen_percentage_of_immune[pathogen.name] = self._get_percentage_of_immune(pathogen)
+        self.pathogen_percentage_of_infected = tmp_pathogen_percentage_of_infected
+        self.pathogen_percentage_of_immune = tmp_pathogen_percentage_of_immune
+
     def get_state_dict(self, short=True) -> dict:
         """
         Help function to get a dataset summarizing the the current state (filtered for only infected cities)
@@ -237,7 +245,10 @@ class Game:
 
         return [pathogen for pathogen in pathogens if pathogen in relevant_pathogens]
 
-    def get_percentage_of_infected(self, pathogen) -> int:
+    def get_percentage_of_infected(self, pathogen):
+        return self.pathogen_percentage_of_infected[pathogen.name]
+
+    def _get_percentage_of_infected(self, pathogen) -> int:
         """
         Get the amount of all currently alive citizen infected by this pathogen
         :param pathogen: pathogen object
@@ -248,7 +259,10 @@ class Game:
                               city.outbreak.pathogen == pathogen])
         return 1 / total_pop * total_infected
 
-    def get_percentage_of_immune(self, pathogen) -> int:
+    def get_percentage_of_immune(self, pathogen):
+        return self.pathogen_percentage_of_immune[pathogen.name]
+
+    def _get_percentage_of_immune(self, pathogen) -> int:
         """
         (To an extend an heuristic/biased approach to this feature)
         Get the amount of all currently alive citizen which are not infected in a city with a outbreak and vaccine deployed
@@ -281,6 +295,13 @@ class Game:
         total_immune += sum([city.population * 0.5 for city in cities_with_medication_only])
 
         return 1 / total_pop * total_immune
+
+    def has_event(self, action_object):
+        for event in self.events:
+            if isinstance(event, action_object):
+                return True
+        return False
+
 
     # currently not used but could be useful later
     @property

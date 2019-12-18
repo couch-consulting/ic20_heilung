@@ -54,3 +54,6 @@ class Pathogen:
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+    @property
+    def max_prop(self) -> int:
+        return max(self.infectivity, self.mobility, self.duration, self.lethality)

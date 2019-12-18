@@ -6,12 +6,15 @@ class DevelopVaccine(Action):
     city in the game so far
     """
 
-    def __init__(self, pathogen):
+    def __init__(self, pathogen, input_is_str=False):
         """
         :param pathogen: pathogen object
         """
         action_type = "developVaccine"
-        parameters = {"pathogen": pathogen.name}
+        if input_is_str:
+            parameters = {"pathogen": pathogen}
+        else:
+            parameters = {"pathogen": pathogen.name}
         super().__init__(action_type, self.get_costs(), parameters)
 
     @staticmethod
