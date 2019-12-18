@@ -31,6 +31,10 @@ class Game:
                  for to_city in city.connections]
         self.connections.add_edges_from(edges)
 
+        # Feature that shall not be recomputed on every call like properties below
+        self.cities_list = [city for _, city in self.cities.items()]
+        self.biggest_city = max(self.cities_list, key=lambda x: x.population)
+
     def get_state_dict(self, short=True) -> dict:
         """
         Help function to get a dataset summarizing the the current state (filtered for only infected cities)
@@ -136,13 +140,6 @@ class Game:
         """
         return [city for _, city in self.cities.items() if not city.connections]
 
-    @property
-    def cities_list(self) -> List[City]:
-        """
-        Builds a list of all cities
-        :return: List[City]
-        """
-        return [city for _, city in self.cities.items()]
 
     # Pathogens state
 
@@ -244,12 +241,12 @@ class Game:
         """
         Get the amount of all currently alive citizen infected by this pathogen
         :param pathogen: pathogen object
-        :return: % of the infected
+        :return: % of the infected as value between 0-1
         """
         total_pop = self.total_population + 1
         total_infected = sum([city.population * city.outbreak.prevalence for city in self.cities_infected if
                               city.outbreak.pathogen == pathogen])
-        return 100 / total_pop * total_infected
+        return 1 / total_pop * total_infected
 
     def get_percentage_of_immune(self, pathogen) -> int:
         """
@@ -257,7 +254,7 @@ class Game:
         Get the amount of all currently alive citizen which are not infected in a city with a outbreak and vaccine deployed
         Whereby the people made immune by medication is assumed to be the worst case estimate
         :param pathogen: pathogen object
-        :return: % of the infected
+        :return: % of the immune as value between 0-1
         """
         total_pop = self.total_population + 1
 
@@ -283,7 +280,7 @@ class Game:
         # if vac not but only medication assume 50% are immune
         total_immune += sum([city.population * 0.5 for city in cities_with_medication_only])
 
-        return 100 / total_pop * total_immune
+        return 1 / total_pop * total_immune
 
     # currently not used but could be useful later
     @property

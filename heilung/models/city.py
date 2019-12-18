@@ -76,8 +76,6 @@ class City:
         for event in events:
             if event.type == 'outbreak':
                 outbreak = event
-                continue
-
             elif event.type == 'vaccineDeployed':
                 if event.pathogen not in deployed_vaccines:
                     deployed_vaccines.append(event.pathogen)
@@ -98,6 +96,37 @@ class City:
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
+
+    def has_event(self, action_object):
+        for event in self.events:
+            if isinstance(event, action_object):
+                return True
+        return False
+
+    @property
+    def mobility(self):
+        """
+        Get the state of how mobile this city is (related to pathogen)
+        Returns mobility levels:
+        0. quarantined (or no nearby neighbors an airport closed [not implemented])
+        1. only land route to nearby neighbors (i.e. no airport or airport is closed)
+        2. airport open
+        :return: int between 0-2
+        """
+        mobility_lvl = 0
+        # Amount of connections
+        if not self.under_quarantine:
+            num_of_con = len([city for city in self.connections if city not in self.closed_connections])
+            if num_of_con == 0 or self.airport_closed:
+                mobility_lvl = 1
+            else:
+                mobility_lvl = 2
+
+        # TODO revisit after closeness theory is done
+
+        return mobility_lvl
+
+
 
 # TODO next below (test closeness theory with seed = 1)
 # Can an infection spread to a city nearby (location wise by coordinates) without them being connected via flightpath?
