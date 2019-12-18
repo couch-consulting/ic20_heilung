@@ -1,9 +1,9 @@
-from flask import Flask, request, abort, g
+from flask import Flask, abort, g, request
 
-from heilung.models import Game
-from heilung.cli_game.observer import Observer
 from heilung.builders.action import ActionBuilder
+from heilung.cli_game.observer import Observer
 from heilung.heuristics.human.human import Human
+from heilung.models import Game
 
 app = Flask(__name__)
 
@@ -23,8 +23,6 @@ def index():
     # Temporary to monitor round change
     print(game.state_recap(short=True))
 
-    obs = Observer(game)
-
     action_builder = ActionBuilder(game)
     action_list = action_builder.get_actions()
 
@@ -34,6 +32,7 @@ def index():
 
     # Example for random iterations
     response = action_builder.random_action(action_list)
+    obs = Observer(game, response)
 
     return response.build_action()
 

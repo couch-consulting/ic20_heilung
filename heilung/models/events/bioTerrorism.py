@@ -15,7 +15,3 @@ class BioTerrorism(Event):
         """
         self.pathogen = Pathogen.from_dict(pathogen)
         super().__init__('bioTerrorism', round)
-
-    @classmethod
-    def fromDict(cls, dct: dict):
-        return cls(dct['pathogen'], dct['round'])
