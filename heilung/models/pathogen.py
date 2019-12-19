@@ -52,7 +52,8 @@ class Pathogen:
         )
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        # self.__dict__ == other.__dict__ changed to name due to possible changes in other property values
+        return self.name == other.name
 
     @property
     def max_prop(self) -> int:

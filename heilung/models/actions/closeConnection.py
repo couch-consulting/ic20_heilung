@@ -21,8 +21,8 @@ class CloseConnection(Action):
             self.connections_from_city = connections_from_city
 
         # default to 1 round quarantine iff false input for num_rounds
-        if not isinstance(num_rounds, int) or num_rounds <= 0:
-            num_rounds = 1
+        if not isinstance(num_rounds, int) or num_rounds < 1:
+            raise ValueError("num_rounds must be int greater or equal to 1!")
 
         # Init
         action_type = "closeConnection"
@@ -31,8 +31,10 @@ class CloseConnection(Action):
 
     @staticmethod
     def get_costs(num_rounds):
+        if num_rounds < 1:
+            raise ValueError("num_rounds must be greater or equal to 1!")
         return 3 * num_rounds + 3
 
     @staticmethod
     def get_max_rounds(ava_points):
-        return (ava_points - 3) / 3
+        return max(int((ava_points - 3) / 3), 0)

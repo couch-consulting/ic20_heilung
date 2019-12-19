@@ -18,7 +18,7 @@ class CloseAirport(Action):
 
         # default to 1 round quarantine iff false input for num_rounds
         if not isinstance(num_rounds, int) or num_rounds <= 0:
-            num_rounds = 1
+            raise ValueError("num_rounds must be int greater or equal to 1!")
 
         # Init
         action_type = "closeAirport"
@@ -27,8 +27,10 @@ class CloseAirport(Action):
 
     @staticmethod
     def get_costs(num_rounds):
+        if num_rounds < 1:
+            raise ValueError("num_rounds must be greater or equal to 1!")
         return 5 * num_rounds + 15
 
     @staticmethod
     def get_max_rounds(ava_points):
-        return (ava_points - 15) / 5
+        return max(int((ava_points - 15) / 5), 0)
