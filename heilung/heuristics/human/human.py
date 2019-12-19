@@ -21,17 +21,34 @@ class Human:
     def get_decision(self):
 
         city_ranks = self.rank_cities()
+        # print({k: v for k, v in sorted(city_ranks.items(), key=lambda item: item[1][0], reverse=True)})
+
         ranked_actions = self.rank_actions(city_ranks)
+        # print(sorted(ranked_actions, key=lambda x: x[1], reverse=True))
 
-        print(sorted(ranked_actions, key=lambda x: x[1], reverse=True))
+        # add heuristic for waiting (e.g. in case something is currently developed and we want to deploy it immediately after)
+        # wait heuristic - deicdes to wait
 
+        # logic for if multiple have same prio
 
-        exit()
+        # add logic that might decide on doing 2 things etc - get first fit mäßig (von oben) die meisten punkte, also nehme 1 und 2 wofür du genug punkte hast und gucke ob es eine kombi gibt die mehr punkte hat
 
-        return actions.EndRound().build_action()
+        # Default idea - check if top 3 are possible, if not wait
+        ava_point = self.game.points
+        for action_tuple in ranked_actions[:3]:
+            action = action_tuple[0]
+            if ava_point >= action.get_costs():
+                return action
+
+        return actions.EndRound()
+
 
     def rank_actions(self, city_ranks):
-
+        """
+        Returns each possible (without regard to available points) action with a rank
+        :param city_ranks:
+        :return: List[Action, int]
+        """
         result = []
         # Global city unspecific book keeping of action - e.g. for development of vaccine or medication
         development_actions = {}
@@ -296,7 +313,7 @@ class Human:
         # Put sinceRound into contrast of overall rounds and give a value that indicates how long this outbreak exits
         if self.game.round >= 6:  # this feature is only useful when some rounds already passed
             return h_utils.percentage_to_num_value(
-                h_utils.compute_percentage(self.game, city.outbreak.sinceRound, inverted=inverted))
+                h_utils.compute_percentage(self.game.round, city.outbreak.sinceRound, inverted=inverted))
         else:
             return 0
 

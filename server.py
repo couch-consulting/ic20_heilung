@@ -23,15 +23,17 @@ def index():
     # Temporary to monitor round change
     print(game.state_recap(short=True))
 
-    action_builder = ActionBuilder(game)
-    action_list = action_builder.get_actions()
-
-    # # Heuristic response
-    # human = Human(game)
-    # response = human.get_decision()
+    # Human heuristic response
+    human = Human(game)
+    response = human.get_decision()
+    print(response.build_action())
 
     # Example for random iterations
-    response = action_builder.random_action(action_list)
+    # action_builder = ActionBuilder(game)
+    # action_list = action_builder.get_actions()
+    # response = action_builder.random_action(action_list)
+
+    # Observer
     obs = Observer(game, response)
 
     return response.build_action()
