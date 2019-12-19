@@ -1,7 +1,7 @@
 from typing import List
 
 GRADE_MAPPING = {
-    '--': 0.0,
+    '--': 0.01,  # not zero to have at least some computational effect and does not make everything zero
     '-': 0.25,
     'o': 0.5,
     '+': 0.75,
