@@ -1,15 +1,15 @@
 from typing import List
 
 GRADE_MAPPING = {
-    '--': 1,
-    '-': 2,
-    'o': 3,
-    '+': 4,
-    '++': 5,
+    '--': 0.0,
+    '-': 0.25,
+    'o': 0.5,
+    '+': 0.75,
+    '++': 1.0,
 }
 
 
-def grade_to_scalar(grade: str) -> int:
+def grade_to_scalar(grade: str) -> float:
     """Converts the used "grades" (--, -, o, +, ++) to a value between 0 and 4
 
     Arguments:
