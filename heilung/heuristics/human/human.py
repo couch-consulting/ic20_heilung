@@ -1,6 +1,8 @@
 # Human heuristic
 from heilung.models import actions, events
+from heilung.models.pathogen import Pathogen
 from . import h_utils
+from .h_utils import Scalegroup
 import copy
 import math
 
@@ -20,11 +22,17 @@ class Human:
 
     def get_decision(self):
 
-        city_ranks = self.rank_cities()
-        # print({k: v for k, v in sorted(city_ranks.items(), key=lambda item: item[1][0], reverse=True)})
+        city_ranks, city_weighted_pathogens = self.rank_cities()
+        # print({k: v for k, v in sorted(city_ranks.items(), key=lambda item: item[1], reverse=True)})
+
+        exit()
+
+
+
 
         ranked_actions = self.rank_actions(city_ranks)
         # print(sorted(ranked_actions, key=lambda x: x[1], reverse=True))
+
 
         # add heuristic for waiting (e.g. in case something is currently developed and we want to deploy it immediately after)
         # wait heuristic - deicdes to wait
@@ -34,14 +42,21 @@ class Human:
         # add logic that might decide on doing 2 things etc - get first fit mäßig (von oben) die meisten punkte, also nehme 1 und 2 wofür du genug punkte hast und gucke ob es eine kombi gibt die mehr punkte hat
 
         # Default idea - check if top 3 are possible, if not wait
-        ava_point = self.game.points
-        for action_tuple in ranked_actions[:3]:
+        ava_points = self.game.points
+        top_3 = sorted(ranked_actions, key=lambda x: x[1], reverse=True)[:3]
+        print(sorted(ranked_actions, key=lambda x: x[1], reverse=True)[:10])
+        for action_tuple in top_3:
             action = action_tuple[0]
-            if ava_point >= action.get_costs():
+            if isinstance(action, (actions.PutUnderQuarantine, actions.CloseAirport, actions.CloseConnection)):
+                costs = action.get_costs(action.get_max_rounds(ava_points))
+            else:
+                costs = action.get_costs()
+
+            if ava_points >= costs:
                 return action
 
-        return actions.EndRound()
 
+        return actions.EndRound()
 
     def rank_actions(self, city_ranks):
         """
@@ -49,6 +64,15 @@ class Human:
         :param city_ranks:
         :return: List[Action, int]
         """
+
+        # TODO think about maybe using something similar to compute importance for each value to decide influnces here
+        # make sure that vaccine for each pathogen most important!
+
+        # put this game plan as bias!
+        # define a gameplan which defines what genreal actions should happen first etc and select the highest of these
+        # start with developing medi or vaci of one each, e.g. make first few actions soly work on getting vaccines, medication etc but that is stupid, if city really small it should quarantine until all a dead/immune (e.g. bias is vaccine -> medication -> reduce citiy mobility)
+
+
         result = []
         # Global city unspecific book keeping of action - e.g. for development of vaccine or medication
         development_actions = {}
@@ -111,6 +135,7 @@ class Human:
 
             max_rank = max(reduce_city_mob, exert_influence, apply_hyg_msr, call_elections,
                            launch_campaign, deploy_vaccine, develop_vaccine, deploy_medication, develop_medication)
+            # MAKE SURE THAT IF CITY IS REALLY SMALL AND HIGHLY POTENT PATHOGEN TO LET EVERYON IN THEIR DIE
 
             # Rank mobility actions
             close_connection, close_airport, put_under_quarantine = self.get_mobility_ranks(reduce_city_mob, max_rank)
@@ -151,63 +176,96 @@ class Human:
 
         # Add global actions to result list
         for pat_name, action_ranks in development_actions.items():
-            result.append([actions.DevelopVaccine(pat_name, input_is_str=True), action_ranks['develop_vaccine']])
-            result.append([actions.DevelopMedication(pat_name, input_is_str=True), action_ranks['develop_medication']])
+            print(pat_name)
+            print(action_ranks)
+            if action_ranks['develop_vaccine'] > 0:
+                result.append([actions.DevelopVaccine(pat_name, input_is_str=True), action_ranks['develop_vaccine']])
+            if action_ranks['develop_medication'] > 0:
+                result.append(
+                    [actions.DevelopMedication(pat_name, input_is_str=True), action_ranks['develop_medication']])
 
         return result
 
     def rank_cities(self):
         """
-        Create a dict with the name of each city as a key and their rank in this heuristic as a value
-        :return:
+        Create a dict with the name of each city as a key and their importance in this heuristic as a value
+        :return: dict of importance
         """
-        rank_dict = {}
+        importance_dict = {}
 
         # Get all pathogens which are relevant
         relevant_pathogens = self.game.pathogens_in_cities
         weighted_pathogens = self.reweigh_pathogens(relevant_pathogens)
-        cities_list = self.game.cities_list
+
+        # Dict to store city specfic pathogen weight
 
         # Needed Game data
         biggest_city_pop = self.game.biggest_city.population
+        cities_list = self.game.cities_list
+
+        # Build scale group
+        tmp_scale_group, city_weighted_pathogens = self.get_city_sg_and_pathogens(cities_list, weighted_pathogens)
+        city_scale = Scalegroup(tmp_scale_group)
 
         for city in cities_list:
-            city_rank = 0
+            name = city.name
 
             # Get influence of outbreak
             if city.outbreak:
-                city_pathogen_name = city.outbreak.pathogen.name
-                pathogen = self.reweigh_pathogen_for_city(city, weighted_pathogens[city_pathogen_name])
-                # store reweighed pathogen in city for later
-                city.outbreak.pathogen = pathogen
-                city_rank += h_utils.compute_pathogen_importance(pathogen)
-                city_rank += self.compute_since_round_rank(city)
-                # prevalence influence
-                city_rank += h_utils.percentage_to_num_value(city.outbreak.prevalence)
-                # Influence from medication and vaccines
-                city_pathogen = city.outbreak.pathogen
-                if city_pathogen in self.pat_with_med:
-                    # no need for "and not city.deployed_medication" because multiple deployments may be a good idea
-                    city_rank += 1
-                elif city_pathogen in self.pat_with_med_dev:
-                    city_rank += -1
+                # The older the outbreak the more important the city to cure since deaths are closer
+                city_scale.increase_on_dependency(name, self.since_round_percentage(city) * city_scale.influence_lvl2)
+
+                # The higher the actually infected people in the city the more important the city
+                compared_pop_infected_per = h_utils.compute_percentage(biggest_city_pop,
+                                                                       city.outbreak.prevalence * city.population)
+                city_scale.increase_on_dependency(name, compared_pop_infected_per * city_scale.influence_lvl3)
+
+                if city.outbreak.pathogen in self.pat_with_med or city.outbreak.pathogen in self.pat_with_vac:
+                    # If medication or vaccine is available for this city, is shall become more important
+                    city_scale.increase_on_dependency(name, city_scale.influence_lvl1)
                 if not city.deployed_vaccines:
-                    if city_pathogen in self.pat_with_vac:
-                        city_rank += 1
-                    elif city_pathogen in self.pat_with_vac_dev:
-                        city_rank += -1
+                    # When the city was yet not made immune it gets more important
+                    city_scale.increase_on_dependency(name, city_scale.influence_lvl2)
 
-            # Further influences
             # Influence of population (in contrast to population of the biggest (e.g. highest population) city)
-            city_rank += h_utils.percentage_to_num_value(
-                h_utils.compute_percentage(biggest_city_pop, city.population), cut=0.05, bias=1)
-            # Increase rank if city had no help so far
-            if not [True for event_object in h_utils.helpful_events_list() if city.has_event(event_object)]:
-                city_rank += 1
-            # Store rank in dict
-            rank_dict[city.name] = [city_rank, city]
+            compared_pop_per = h_utils.compute_percentage(biggest_city_pop, city.population)
+            city_scale.increase_on_dependency(name, compared_pop_per * city_scale.influence_lvl2)
 
-        return rank_dict
+            # Increase importance if city had no help so far
+            if not [True for event_object in h_utils.helpful_events_list() if city.has_event(event_object)]:
+                city_scale.increase_on_dependency(name, city_scale.influence_lvl1)
+
+        # Build dict
+        for city_name, importance_per in city_scale.sg.items():
+            importance_dict[city_name] = importance_per
+
+        return importance_dict, city_weighted_pathogens
+
+    def get_city_sg_and_pathogens(self, cities_list, weighted_pathogens):
+        """
+        Initializes the scale group and collects the city specif pathogen weight
+        :param cities_list: list of city objects
+        :param weighted_pathogens: dict of overall weighted pathogens
+        :return: initialized scale group as dict, city specific pathogen weights as dict
+        """
+        # Higher value for percentage for numerical robustness
+        default_value = 100000000000000
+        # TODO rethink this approach to define the base importance and make it numerically robuster
+
+        # Build scale group
+        tmp_scale_group = {}
+        city_weighted_pathogens = {}
+        for city in cities_list:
+            # Default initialize all cities with rank equal to 100% or 100% + % of pathogen
+            if city.outbreak:
+                pathogen = self.reweigh_pathogen_for_city(city, weighted_pathogens[city.outbreak.pathogen.name])
+                city_weighted_pathogens[city.name] = pathogen
+                tmp_scale_group[city.name] = default_value + (
+                            default_value * h_utils.compute_pathogen_importance(pathogen, city.outbreak.pathogen))
+            else:
+                tmp_scale_group[city.name] = default_value
+
+        return tmp_scale_group, city_weighted_pathogens
 
     def reweigh_pathogen_for_city(self, city, pathogen):
         """
@@ -216,49 +274,34 @@ class Human:
         :param pathogen: pathogen object
         :return: reweighed pathogen object
         """
-        lethality = pathogen.lethality
-        infectivity = pathogen.infectivity
-        duration = pathogen.duration
-        mobility = pathogen.mobility
-
-        # Tmp vars
-        vacc_dep = False
-
+        pat_scale = Scalegroup({'lethality': pathogen.lethality, 'infectivity': pathogen.infectivity,
+                                'mobility': pathogen.mobility, 'duration': pathogen.duration})
         # Collect city features
-        # Anti_vac influence by default small
-        if city.has_event(events.AntiVaccinationism):
-            anti_vac = 1
-        else:
-            anti_vac = 0
-        # City hygiene got a -2 bias since it is a less important feature
-        city_hygiene = max(city.hygiene - 2, 1)
-        if city.has_event(events.VaccineDeployed):
-            vacc_dep = True
-        # Assumption of worst case medication deployment for influence value
-        if city.has_event(events.MedicationDeployed):
-            med_dep = 1
-        else:
-            med_dep = 0
-        # Take native level of city mobility
-        city_mobility = city.mobility
+        anti_vac = city.has_event(events.AntiVaccinationism)
+        vacc_dep = bool(city.deployed_vaccines)
+        med_dep = bool(city.deployed_medication)
+        city_hyg = city.hygiene
 
-        # Adjust Pathogen dependent on city features
-        duration = h_utils.decrease_on_dependency(duration, self.compute_since_round_rank(city))
-        mobility = h_utils.increase_on_dependency(mobility, city_mobility)
+        # The higher the more mobile
+        city_mob = city.mobility
+        # The higher the longer the outbreak is alive
+        outbreak_lifetime = self.since_round_percentage(city)
+
+        # If outbreak_lifetime exists longer then the the duration becomes more important because kill-roll is sooner
+        pat_scale.increase_on_dependency('duration', outbreak_lifetime * pat_scale.influence_lvl2)
+        # Increase mobility of the city, increases mobility of the pathogen
+        pat_scale.increase_on_dependency('mobility', city_mob * pat_scale.influence_lvl2)
+
         if vacc_dep:
-            infectivity = 0
+            pat_scale.sg['infectivity'] = 0
         else:
-            infectivity = h_utils.increase_on_dependency(infectivity, anti_vac)
-            infectivity = h_utils.increase_on_dependency(infectivity, city_hygiene)
-            infectivity = h_utils.decrease_on_dependency(infectivity, med_dep)
+            pat_scale.increase_on_dependency('infectivity', int(anti_vac) * pat_scale.influence_lvl1)
+            pat_scale.decrease_on_dependency('infectivity', city_hyg * pat_scale.influence_lvl2)
+            pat_scale.decrease_on_dependency('infectivity', int(med_dep) * pat_scale.influence_lvl2)
 
         # Return pathogen
-        pathogen.lethality = lethality
-        pathogen.infectivity = infectivity
-        pathogen.duration = duration
-        pathogen.mobility = mobility
-
-        return pathogen
+        return Pathogen(pathogen.name, pat_scale.sg['infectivity'], pat_scale.sg['mobility'],
+                        pat_scale.sg['duration'], pat_scale.sg['lethality'], transformation=False)
 
     def reweigh_pathogens(self, pathogens):
         """
@@ -269,51 +312,44 @@ class Human:
 
         tmp_dict = {}
         for pathogen in pathogens:
-            lethality = pathogen.lethality
-            infectivity = pathogen.infectivity
-            mobility = pathogen.mobility
-            duration = pathogen.duration
-
-            # Scale from the game
-            # % of infected citizens for this pathogen - transformed to value in range 1-5
-            tmp_num_value = h_utils.percentage_to_num_value(self.game.get_percentage_of_infected(pathogen))
-            infectivity = h_utils.increase_on_dependency(infectivity, tmp_num_value)
-            lethality = h_utils.increase_on_dependency(lethality, tmp_num_value)
-            # % of Immune citizens overall
-            tmp_num_value = h_utils.percentage_to_num_value(self.game.get_percentage_of_immune(pathogen))
-            infectivity = h_utils.decrease_on_dependency(infectivity, tmp_num_value)
-
-            # Scale in between pathogen properties
-            lethality = h_utils.decrease_on_dependency(lethality, duration)
-            infectivity = h_utils.increase_on_dependency(infectivity, duration)
-            mobility = h_utils.increase_on_dependency(mobility, infectivity)
-
-            # TODO think about further game wide dependencies for pathogen
+            pat_scale = Scalegroup({'lethality': 1, 'infectivity': 1,
+                                    'mobility': 1, 'duration': 1})
 
             # Apply base bias (lethality stays the same)
-            infectivity = max(infectivity - 1, 1)
-            mobility = max(mobility - 2, 1)
-            duration = max(duration - 3, 1)
+            pat_scale.apply_bias('infectivity', 0.9)
+            pat_scale.apply_bias('mobility', 0.7)
+            pat_scale.apply_bias('duration', 0.6)
 
-            pathogen.lethality = lethality
-            pathogen.infectivity = infectivity
-            pathogen.duration = duration
-            pathogen.mobility = mobility
-            tmp_dict[pathogen.name] = pathogen
+            # Collect Game Feature
+            infected_citz = self.game.get_percentage_of_infected(pathogen)
+            immune_citz = self.game.get_percentage_of_immune(pathogen)
+
+            # Influences
+            pat_scale.increase_on_dependency('infectivity', infected_citz * pat_scale.influence_lvl3)
+            pat_scale.increase_on_dependency('lethality', infected_citz * pat_scale.influence_lvl3)
+            pat_scale.decrease_on_dependency('infectivity', immune_citz * pat_scale.influence_lvl3)
+            pat_scale.increase_on_dependency('mobility', pathogen.infectivity * pat_scale.influence_lvl3)
+            # Infectivity is more important the longer the duration
+            pat_scale.increase_on_dependency('infectivity', pathogen.duration * pat_scale.influence_lvl3)
+            # The shorter the duration the more important is lethality, since duration currently has 100% := long, inverted is needed
+            pat_scale.increase_on_dependency('lethality', pathogen.duration * pat_scale.influence_lvl3, inverted=True)
+
+            tmp_dict[pathogen.name] = Pathogen(pathogen.name, pat_scale.sg['infectivity'], pat_scale.sg['mobility'],
+                                               pat_scale.sg['duration'], pat_scale.sg['lethality'],
+                                               transformation=False)
 
         return tmp_dict
 
-    def compute_since_round_rank(self, city, inverted=True):
+    def since_round_percentage(self, city, inverted=True):
         """
-        City feature
+        Computes a percentage equal to how old or new a round is
         :param city: city object
-        :param inverted: if true, 100% equals new, if false 100% equal old
-        :return: rank of since round between 1-5
+        :param inverted: if true, 100% equals old, if false 100% equal new
+        :return: percentage of how old or new a round is
         """
         # Put sinceRound into contrast of overall rounds and give a value that indicates how long this outbreak exits
         if self.game.round >= 6:  # this feature is only useful when some rounds already passed
-            return h_utils.percentage_to_num_value(
-                h_utils.compute_percentage(self.game.round, city.outbreak.sinceRound, inverted=inverted))
+            return h_utils.compute_percentage(self.game.round, city.outbreak.sinceRound, inverted=inverted)
         else:
             return 0
 
@@ -482,7 +518,7 @@ class Human:
 
         if pathogen not in self.pat_with_med and pathogen not in self.pat_with_med_dev:
             develop_medication = medication
-        elif pathogen in self.pat_with_vac:
+        elif pathogen in self.pat_with_med:
             deploy_medication = medication
 
         return deploy_medication, develop_medication
@@ -524,5 +560,13 @@ class Human:
             else:
                 close_airport -= tmp_counter
                 put_under_quarantine -= tmp_counter
+
+        # Check if ava_points is enough for an action
+        if actions.CloseConnection.get_max_rounds(self.game.points) == 0:
+            close_connection = 0
+        if actions.CloseAirport.get_max_rounds(self.game.points) == 0:
+            close_airport = 0
+        if actions.PutUnderQuarantine.get_max_rounds(self.game.points) == 0:
+            put_under_quarantine = 0
 
         return put_under_quarantine, close_airport, close_connection, sorted_connections

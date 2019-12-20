@@ -109,18 +109,18 @@ class City:
         Get the state of how mobile this city is (related to pathogen)
         Returns mobility levels:
         0. quarantined (or no nearby neighbors an airport closed [not implemented])
-        1. only land route to nearby neighbors (i.e. no airport or airport is closed)
-        2. airport open
-        :return: int between 0-2
+        1/2. only land route to nearby neighbors (i.e. no airport or airport is closed)
+        1. airport open
+        :return: % as float between 0-1
         """
         mobility_lvl = 0
         # Amount of connections
         if not self.under_quarantine:
             num_of_con = len([city for city in self.connections if city not in self.closed_connections])
             if num_of_con == 0 or self.airport_closed:
-                mobility_lvl = 1
+                mobility_lvl = 1 / 2
             else:
-                mobility_lvl = 2
+                mobility_lvl = 1
 
         # TODO revisit after closeness theory is done
 
