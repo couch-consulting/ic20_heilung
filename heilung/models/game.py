@@ -150,7 +150,6 @@ class Game:
 
 
     # Pathogens state
-
     @property
     def pathogens_in_cities(self) -> List[Pathogen]:
         """

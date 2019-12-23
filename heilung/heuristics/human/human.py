@@ -2,7 +2,7 @@
 from heilung.models import actions, events
 from heilung.models.pathogen import Pathogen
 from . import h_utils
-from .h_utils import Scalegroup
+from .scalegroup import Scalegroup
 import copy
 import math
 
@@ -22,27 +22,41 @@ class Human:
         self.city_weighted_pathogens = {}
         self.population_of_biggest_city = self.game.biggest_city.population
 
+        # Get all pathogens which are relevant and weigh them
+        relevant_pathogens = self.game.pathogens_in_cities
+        self.weighted_pathogens = self.reweigh_pathogens(relevant_pathogens)
+        self.relevant_pathogens_dict = {pat.name: pat for pat in relevant_pathogens}
+
     def get_decision(self):
 
+        # Rank of each global action (Scaled to 0-1 whereby most important is 1)
+        ranked_global_actions = self.rank_global_actions()
+        # print(sorted(ranked_global_actions, key=lambda x: x[1], reverse=True))
+
+        # Rank of each citiy (Scaled to 0-1 whereby most important is 1)
         city_ranks = self.rank_cities()
         # print({k: v for k, v in sorted(city_ranks.items(), key=lambda item: item[1], reverse=True)})
 
-        ranked_actions = self.rank_actions_for_cities(city_ranks)
-        # print(sorted(ranked_actions, key=lambda x: x[1], reverse=True))
+        # Rank of each action per city (Scaled to 0-1 for each city whereby most important = 1)
+        ranked_city_actions_per_city = self.rank_actions_for_cities(self.game.cities_list)
+        #print(sorted(ranked_city_actions, key=lambda x: x[1], reverse=True))
+
 
         exit()
-        # add heuristic for waiting (e.g. in case something is currently developed and we want to deploy it immediately after)
-        # wait heuristic - deicdes to wait
 
-        # logic for if multiple have same prio
+        # # TODO: Combine importance of actions with city importance
+        # combined_ranks = h_utils.compute_combined_importance(city_ranks, ranked_city_actions_per_city)
+        # # TODO: combine ranks for gloabl and city-action to have one unique list of ranked actions
+        # complete_action_list = h_utils.combine_global_and_city_actions(ranked_global_actions, ranked_city_actions)
 
-        # add logic that might decide on doing 2 things etc - get first fit mäßig (von oben) die meisten punkte, also nehme 1 und 2 wofür du genug punkte hast und gucke ob es eine kombi gibt die mehr punkte hat
+        # TODO: add heuristic for waiting (e.g. in case something is currently developed and we want to deploy it immediately after)
+        # TODO: logic for if multiple have same prio
+        # TODO: add logic that might decide on doing 2 things etc - get first fit mäßig (von oben) die meisten punkte, also nehme 1 und 2 wofür du genug punkte hast und gucke ob es eine kombi gibt die mehr punkte hat
 
-        # Default idea - check if top 3 are possible, if not wait
+        # Current basic heuristic: (Wait if not possible)
+        # 1. Do actions of global until no more available
         ava_points = self.game.points
-        top_3 = sorted(ranked_actions, key=lambda x: x[1], reverse=True)[:3]
-        print(sorted(ranked_actions, key=lambda x: x[1], reverse=True)[:10])
-        for action_tuple in top_3:
+        for action_tuple in ranked_global_actions:
             action = action_tuple[0]
             if isinstance(action, (actions.PutUnderQuarantine, actions.CloseAirport, actions.CloseConnection)):
                 costs = action.get_costs(action.get_max_rounds(ava_points))
@@ -51,40 +65,146 @@ class Human:
 
             if ava_points >= costs:
                 return action
+        # 2. Do most important of most important city
+        most_important_city = sorted(city_ranks.items(), key=lambda item: item[1], reverse=True)[0]
+        most_important_action_of_city = \
+        sorted(ranked_city_actions_per_city[most_important_city], key=lambda item: item[1], reverse=True)[0]
+        action = most_important_action_of_city[0]
+        if isinstance(action, (actions.PutUnderQuarantine, actions.CloseAirport, actions.CloseConnection)):
+            costs = action.get_costs(action.get_max_rounds(ava_points))
+        else:
+            costs = action.get_costs()
+
+        if ava_points >= costs:
+            return action
 
         return actions.EndRound()
 
-    def rank_actions_for_cities(self, city_ranks):
+    def rank_global_actions(self):
+        """
+        Ranks global actions (develop-actions for each pathogen)
+        :return: List of Tuples of actions ready to be build and their rank
+        """
+        # math robustness offset
+        VAL = 100
+
+        # Initialize scale group for all pathogens
+        global_action_scale = Scalegroup({})
+        for pathogen_name, weighted_pathogen in self.weighted_pathogens.items():
+            importance = h_utils.compute_pathogen_importance(weighted_pathogen,
+                                                             self.relevant_pathogens_dict[pathogen_name]) * VAL
+            # Store annotated in scale group
+            global_action_scale.sg[pathogen_name + '_dV'] = importance
+            global_action_scale.sg[pathogen_name + '_dM'] = importance
+
+            # Apply bias
+            global_action_scale.apply_bias(pathogen_name + '_dV', 1)
+            global_action_scale.apply_bias(pathogen_name + '_dM', 0.8)
+
+        # Values scale for
+        for adapted_pathogen_name, rank in global_action_scale.sg.items():
+            name_ending = adapted_pathogen_name[-3:]
+            pathogen = self.relevant_pathogens_dict[adapted_pathogen_name[:-3]]
+
+            # Features
+            # Both values are rather under guessed - since actual values can not be precisely calculated
+            # Further immunity to other pathogens is not regarded and thus values are also different
+            total_infected = self.game.get_percentage_of_infected(pathogen)
+            total_immune = self.game.get_percentage_of_immune(pathogen)
+
+            if name_ending == '_dV':
+                if pathogen not in self.pat_with_vac and pathogen not in self.pat_with_vac_dev:
+                    # vaccine importance
+                    # The more mobile the pathogen, the more important to deploy the vaccine
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               pathogen.mobility * global_action_scale.influence_lvl2)
+                    # The longer the duration the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               pathogen.duration * global_action_scale.influence_lvl2)
+                    # The less lethal the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               (
+                                                                       1 - pathogen.lethality) * global_action_scale.influence_lvl2)
+                    # The more infective the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               pathogen.infectivity * global_action_scale.influence_lvl2)
+
+                    # The more people are infected the less important is vaccine
+                    global_action_scale.decrease_on_dependency(adapted_pathogen_name,
+                                                               total_infected * global_action_scale.influence_lvl3)
+                    # The less people are immune the more important is vaccine - change this if vaccine is to dominate
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               (1 - total_immune) * global_action_scale.influence_lvl3)
+                else:
+                    global_action_scale.sg[adapted_pathogen_name] = 0
+            else:
+                if pathogen not in self.pat_with_med and pathogen not in self.pat_with_med_dev:
+                    # medication importance:
+                    # The less mobile the pathogen, the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               (
+                                                                           1 - pathogen.mobility) * global_action_scale.influence_lvl2)
+                    # The shorter the duration of the pathogen the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               (
+                                                                           1 - pathogen.duration) * global_action_scale.influence_lvl2)
+                    # The more lethal the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               pathogen.lethality * global_action_scale.influence_lvl2)
+                    # The less infective the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               (
+                                                                       1 - pathogen.infectivity) * global_action_scale.influence_lvl2)
+
+                    # The more people are infected the more important is medication
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               total_infected * global_action_scale.influence_lvl3)
+                    # The less people are immune the less-more important is medication,change this if vaccine is to dominate
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               total_immune * global_action_scale.influence_lvl3)
+                else:
+                    global_action_scale.sg[adapted_pathogen_name] = 0
+
+        # Build actions
+        result = []
+        global_action_scale.rescale()
+        for adapted_pathogen_name, rank in global_action_scale.sg.items():
+            name_ending = adapted_pathogen_name[-3:]
+            pathogen = self.relevant_pathogens_dict[adapted_pathogen_name[:-3]]
+
+            if rank <= 0:
+                continue
+
+            if name_ending == '_dV':
+                result.append((actions.DevelopVaccine(pathogen), rank))
+            else:
+                result.append((actions.DevelopMedication(pathogen), rank))
+
+        return result
+
+    def rank_actions_for_cities(self, cities):
         """
         Builds a ranked list of all possible actions
-        :param city_ranks: dict of city name as key and rank percentage as value
+        :param cities: list of cities
         :return: a list of tuples containing the action ready to build and the rank percentage
         """
         action_ranks = []
+        action_ranks_per_city = {}
 
-        # TODO implement separate ranking for develop meidcation/vaccine
+        for city in cities:
+            city_name = city.name
 
-        for city_name, importance_per in city_ranks.items():
-            city = self.game.cities[city_name]
-            # if city.outbreak:
-            #     continue
-            tmp_action_ranks = self.rank_actions_of_city(city)
-            tmp_var = self.finalize_actions_of_city(city, tmp_action_ranks)
+            # Get rank of each action
+            action_scale = self.rank_actions_of_city(city)
 
-            # Kombiniere mit city rank
-            # compute importance of actions? - keep in mind that cities without pathogen have much higher values hence we need to scale most likely
+            # Make build ready
+            build_ready_actions = self.finalize_actions_of_city(city, action_scale.sg)
 
-        # # Add global actions to result list
-        # for pat_name, action_ranks in development_actions.items():
-        #     print(pat_name)
-        #     print(action_ranks)
-        #     if action_ranks['develop_vaccine'] > 0:
-        #         result.append([actions.DevelopVaccine(pat_name, input_is_str=True), action_ranks['develop_vaccine']])
-        #     if action_ranks['develop_medication'] > 0:
-        #         result.append(
-        #             [actions.DevelopMedication(pat_name, input_is_str=True), action_ranks['develop_medication']])
-        #
-        #
+            # Append to overall list
+            action_ranks = action_ranks + build_ready_actions
+
+            # Add to dict
+            action_ranks_per_city[city_name] = build_ready_actions
 
         return action_ranks
 
@@ -92,7 +212,7 @@ class Human:
         """
         Returns each possible (without regard to available points) action with a rank
         :param city: city object
-        :return: dict with name of action as key and importance percetnage as value
+        :return: scale group object
         """
 
         # Action scale group
@@ -129,12 +249,13 @@ class Human:
             action_scale.increase_on_dependency('reduce_city_mob', pathogen.mobility * action_scale.influence_lvl2)
             # The shorter the duration of the pathogen the more important
             action_scale.increase_on_dependency('reduce_city_mob',
-                                                (1 - pathogen.duration) * action_scale.influence_lvl3)
+                                                (1 - pathogen.duration) * action_scale.influence_lvl2)
             # The lower the population the more important to reduce city mobility
-            action_scale.increase_on_dependency('reduce_city_mob', (1 - compared_pop) * action_scale.influence_lvl3)
+            action_scale.increase_on_dependency('reduce_city_mob', (1 - compared_pop) * action_scale.influence_lvl2)
             # The older the pathogen the less important to reduce its mobility
             action_scale.decrease_on_dependency('reduce_city_mob', outbreak_lifetime * action_scale.influence_lvl3)
             # TODO implement neighbor check with infected and immune % (the higher immune and already infected neighbors the less important reduce city mobility/the less infected or immune the more important)
+            # TODO implement hardcode 100% reduction if city very small and high pathogen importance with lwo duration high lethatily
 
             # Weigh Vaccine
             if vac_state:
@@ -173,7 +294,7 @@ class Human:
                                                     (1 - pathogen.infectivity) * action_scale.influence_lvl2)
 
                 # If anti vacs in city, more important
-                action_scale.increase_on_dependency('deploy_vaccine', int(anti_vac) * action_scale.influence_lvl1)
+                action_scale.increase_on_dependency('deploy_medication', int(anti_vac) * action_scale.influence_lvl1)
                 # For each time medication was already deployed, reduce importance
                 action_scale.decrease_on_dependency('deploy_medication',
                                                     len(city.deployed_medication) * action_scale.influence_lvl3)
@@ -220,54 +341,44 @@ class Human:
         # Further, 3er action need no adjustment - all are possible - and medication/vaccine already done above
         self.readjust_mobility_actions(action_scale, city)  # adjusts action_scale object in palce
 
-        return action_scale.sg
+        return action_scale
 
-    def finalize_actions_of_city(self, city, action_ranks):
+    def finalize_actions_of_city(self, city, rank_of_actions):
         """
         Finalize a list of action which are ready to be build
         :param city: city object
-        :param action_ranks: rank of each action for the given city object
-        :return: List of actions ready to be build
+        :param rank_of_actions: dict with name of action as key and importance percentage as value
+        :return: List of Tuples of actions ready to be build and their rank
         """
-        # Build actions - own function later
+
         # List of ready-to-build actions
         result = []
-        # city unspecific book keeping of actions - e.g. for development of vaccine or medication
-        development_actions = {}
 
-        development_actions[pathogen.name] = {'develop_vaccine': 0, 'develop_medication': 0}
+        if rank_of_actions['deploy_medication'] > 0:
+            result.append(
+                (actions.DeployMedication(city, city.outbreak.pathogen), rank_of_actions['deploy_medication']))
+        if rank_of_actions['deploy_vaccine'] > 0:
+            result.append((actions.DeployVaccine(city, city.outbreak.pathogen), rank_of_actions['deploy_vaccine']))
 
-        # Füge an glboal action ranks hinzu (e.g. wegen develop zeug)
+        result.append((actions.ExertInfluence(city), rank_of_actions['exert_influence']))
+        result.append((actions.ApplyHygienicMeasures(city), rank_of_actions['apply_hyg_msr']))
+        result.append((actions.CallElections(city), rank_of_actions['call_elections']))
+        result.append((actions.LaunchCampaign(city), rank_of_actions['launch_campaign']))
 
-        # Add to result list with city offset
-        if deploy_medication > 0:
-            result.append([actions.DeployMedication(city, pathogen), deploy_medication + rank])
-        if deploy_vaccine > 0:
-            result.append([actions.DeployVaccine(city, pathogen), deploy_vaccine + rank])
+        if rank_of_actions['close_connection'][0] > 0:
+            num_rounds = rank_of_actions['close_connection'][1]
+            to_city = rank_of_actions['close_connection'][2]
+            result.append((actions.CloseConnection(city, to_city, num_rounds), rank_of_actions['close_connection'][0]))
 
-        # Only save the highest rank for global action
-        if develop_medication > 0 and development_actions[pathogen.name]['develop_medication'] < (
-                develop_medication + rank):
-            development_actions[pathogen.name]['develop_medication'] = develop_medication + rank
-        if develop_vaccine > 0 and development_actions[pathogen.name]['develop_vaccine'] < (
-                develop_vaccine + rank):
-            development_actions[pathogen.name]['develop_vaccine'] = develop_vaccine + rank
+        if rank_of_actions['close_airport'][0] > 0:
+            num_rounds = rank_of_actions['close_airport'][1]
+            result.append((actions.CloseAirport(city, num_rounds), rank_of_actions['close_airport'][0]))
 
-        result.append([actions.ExertInfluence(city), exert_influence + reduced_rank])
-        result.append([actions.ApplyHygienicMeasures(city), apply_hyg_msr + reduced_rank])
-        result.append([actions.CallElections(city), call_elections + reduced_rank])
-        result.append([actions.LaunchCampaign(city), launch_campaign + reduced_rank])
+        if rank_of_actions['put_under_quarantine'][0] > 0:
+            num_rounds = rank_of_actions['put_under_quarantine'][1]
+            result.append((actions.PutUnderQuarantine(city, num_rounds), rank_of_actions['put_under_quarantine'][0]))
 
-        if close_connection > 0:
-            num_rounds = actions.CloseConnection.get_max_rounds(self.game.points)
-
-        if close_airport > 0:
-            num_rounds = actions.CloseAirport.get_max_rounds(self.game.points)
-            result.append([actions.CloseAirport(city, num_rounds), close_airport + rank])
-        if put_under_quarantine > 0:
-            num_rounds = actions.PutUnderQuarantine.get_max_rounds(self.game.points)
-            result.append([actions.PutUnderQuarantine(city, num_rounds), put_under_quarantine + rank])
-
+        return result
 
     def rank_cities(self):
         """
@@ -276,10 +387,6 @@ class Human:
         """
         importance_dict = {}
 
-        # Get all pathogens which are relevant
-        relevant_pathogens = self.game.pathogens_in_cities
-        weighted_pathogens = self.reweigh_pathogens(relevant_pathogens)
-
         # Dict to store city specfic pathogen weight
 
         # Needed Game data
@@ -287,7 +394,8 @@ class Human:
         cities_list = self.game.cities_list
 
         # Build scale group
-        tmp_scale_group, self.city_weighted_pathogens = self.get_city_sg_and_pathogens(cities_list, weighted_pathogens)
+        tmp_scale_group, self.city_weighted_pathogens = self.get_city_sg_and_pathogens(cities_list,
+                                                                                       self.weighted_pathogens)
         city_scale = Scalegroup(tmp_scale_group)
 
         for city in cities_list:
@@ -319,6 +427,7 @@ class Human:
                 city_scale.increase_on_dependency(name, city_scale.influence_lvl1)
 
         # Build dict
+        city_scale.rescale()
         for city_name, importance_per in city_scale.sg.items():
             importance_dict[city_name] = importance_per
 
@@ -508,9 +617,15 @@ class Human:
         if actions.PutUnderQuarantine.get_max_rounds(self.game.points) == 0:
             put_under_quarantine = 0
 
-        # Add to scale group
+        # Add to scale group for rescale
+        action_scale.sg['close_connection'] = close_connection
+        action_scale.sg['close_airport'] = close_airport
+        action_scale.sg['put_under_quarantine'] = put_under_quarantine
+        action_scale.rescale()
+
+        # Add fully to scale group
         # TODO refactor such actions for closing any connection with any amount of rounds exists with an importance value
-        action_scale.sg['close_connection'] = (close_connection, close_connection_rounds, to_city)
+        action_scale.sg['close_connection'] = (action_scale.sg['close_connection'], close_connection_rounds, to_city)
         # TODO refactor such that both actions with any amount of round has an importance value
-        action_scale.sg['close_airport'] = (close_airport, close_airport_rounds)
-        action_scale.sg['put_under_quarantine'] = (put_under_quarantine, put_under_quarantine_rounds)
+        action_scale.sg['close_airport'] = (action_scale.sg['close_airport'], close_airport_rounds)
+        action_scale.sg['put_under_quarantine'] = (action_scale.sg['put_under_quarantine'], put_under_quarantine_rounds)
