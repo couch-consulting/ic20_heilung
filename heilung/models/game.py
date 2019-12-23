@@ -96,7 +96,7 @@ class Game:
             f"Relevant Pathogens: {recap['relevant_pathogens_count']} | "
             f"Total Population: {recap['total_population']}\n"
             f"Active Pathogens: {recap['relevant_pathogens']}\n"
-            f"Infected Cities: {recap['infected_cities']}\n"
+            # f"Infected Cities: {recap['infected_cities']}\n"
             f"Error MSG: {recap['error']}\n"
             f"Game events: {recap['game_events']}"
         )

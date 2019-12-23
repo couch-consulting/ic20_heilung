@@ -41,42 +41,20 @@ class Human:
         ranked_city_actions_per_city = self.rank_actions_for_cities(self.game.cities_list)
         #print(sorted(ranked_city_actions, key=lambda x: x[1], reverse=True))
 
-
-        exit()
-
+        # Insights: Anfang is curical thus below must be reworked
         # # TODO: Combine importance of actions with city importance
         # combined_ranks = h_utils.compute_combined_importance(city_ranks, ranked_city_actions_per_city)
         # # TODO: combine ranks for gloabl and city-action to have one unique list of ranked actions
         # complete_action_list = h_utils.combine_global_and_city_actions(ranked_global_actions, ranked_city_actions)
 
         # TODO: add heuristic for waiting (e.g. in case something is currently developed and we want to deploy it immediately after)
+        # Vlt ist das gut zu wissen, dass man nur für 1-2 bzw nach einer anzahl an runden wieder warten sollte auf das bzw eine warte heuristic die immer die hälfte sparrt
         # TODO: logic for if multiple have same prio
         # TODO: add logic that might decide on doing 2 things etc - get first fit mäßig (von oben) die meisten punkte, also nehme 1 und 2 wofür du genug punkte hast und gucke ob es eine kombi gibt die mehr punkte hat
 
-        # Current basic heuristic: (Wait if not possible)
-        # 1. Do actions of global until no more available
-        ava_points = self.game.points
-        for action_tuple in ranked_global_actions:
-            action = action_tuple[0]
-            if isinstance(action, (actions.PutUnderQuarantine, actions.CloseAirport, actions.CloseConnection)):
-                costs = action.get_costs(action.get_max_rounds(ava_points))
-            else:
-                costs = action.get_costs()
 
-            if ava_points >= costs:
-                return action
-        # 2. Do most important of most important city
-        most_important_city = sorted(city_ranks.items(), key=lambda item: item[1], reverse=True)[0]
-        most_important_action_of_city = \
-        sorted(ranked_city_actions_per_city[most_important_city], key=lambda item: item[1], reverse=True)[0]
-        action = most_important_action_of_city[0]
-        if isinstance(action, (actions.PutUnderQuarantine, actions.CloseAirport, actions.CloseConnection)):
-            costs = action.get_costs(action.get_max_rounds(ava_points))
-        else:
-            costs = action.get_costs()
 
-        if ava_points >= costs:
-            return action
+
 
         return actions.EndRound()
 
@@ -186,9 +164,8 @@ class Human:
         """
         Builds a ranked list of all possible actions
         :param cities: list of cities
-        :return: a list of tuples containing the action ready to build and the rank percentage
+        :return: a dict of tuples containing the action ready to build and the rank percentage whereby the key is the name of the city
         """
-        action_ranks = []
         action_ranks_per_city = {}
 
         for city in cities:
@@ -200,13 +177,11 @@ class Human:
             # Make build ready
             build_ready_actions = self.finalize_actions_of_city(city, action_scale.sg)
 
-            # Append to overall list
-            action_ranks = action_ranks + build_ready_actions
 
             # Add to dict
             action_ranks_per_city[city_name] = build_ready_actions
 
-        return action_ranks
+        return action_ranks_per_city
 
     def rank_actions_of_city(self, city):
         """
@@ -603,10 +578,12 @@ class Human:
                 sorted_connections.remove(closed_con)
 
             if not sorted_connections:
+                to_city = None
                 # if empty, no connection are available hence equal to airport closed
                 close_connection = close_airport = 0
                 put_under_quarantine = put_under_quarantine * 0.6
             else:
+                to_city = self.game.cities[sorted_connections[0]]
                 close_airport = close_airport * max(1 - (tmp_counter * 0.2), 0)
                 put_under_quarantine -= put_under_quarantine * max(1 - (tmp_counter * 0.1), 0)
         # Check if ava_points is enough for an action

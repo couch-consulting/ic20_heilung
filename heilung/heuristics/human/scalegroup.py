@@ -89,7 +89,10 @@ class Scalegroup:
     # Utils
     @property
     def max_val(self):
-        return max([value for key, value in self.sg.items()])
+        value_list = [value for key, value in self.sg.items()]
+        if not value_list:
+            return 0
+        return max(value_list)
 
     def print_recap(self):
         output = ""
@@ -102,5 +105,9 @@ class Scalegroup:
         Normalizes values of scale group to be between 0-1
         """
         max_val = self.max_val
+
+        if max_val == 0:
+            return
+
         for key, value in self.sg.items():
             self.sg[key] = self.MAX_PER_CONST / max_val * value
