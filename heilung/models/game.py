@@ -302,6 +302,17 @@ class Game:
                 return True
         return False
 
+    def get_connections_sorted_for_highest_population_first(self, city):
+        """
+        Return connection list sorted for highest population first
+        :param city:
+        :return: list
+        """
+        con_with_pop = [[tmp_city_name, self.cities[tmp_city_name].population] for tmp_city_name in
+                        city.connections]
+        con_sorted = [con_tuple[0] for con_tuple in sorted(con_with_pop, key=lambda x: x[1], reverse=True)]
+        return con_sorted
+
 
     # currently not used but could be useful later
     @property
