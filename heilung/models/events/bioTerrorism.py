@@ -11,7 +11,7 @@ class BioTerrorism(Event):
 
         Arguments:
             pathogen {dict} -- Dictionary of the Pathogen Object
-            round {int} -- Round when this event occured
+            round {int} -- Round when this event occurred
         """
         self.pathogen = Pathogen.from_dict(pathogen)
         super().__init__('bioTerrorism', round)

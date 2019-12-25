@@ -24,7 +24,7 @@ class City:
         :param awareness: [effect unknown how far this helps]
         :param events:
         """
-        # TODO: Evaluate necessity of preprocessing
+        # TODO: Evaluate necessity of prepossessing
         self.name = name
         self.latitude = latitude
         self.longitude = longitude
@@ -63,7 +63,7 @@ class City:
         :return:
         """
         # TODO add correct event Builder here after we know all event types for all possible events
-        # TODO maybe move into constructor of evnets class
+        # TODO maybe move into constructor of events class
         events = convert_events(events)
         tmp_events = []
         # Some shortcut vars which can be checked during building
@@ -133,7 +133,6 @@ class City:
         :return: List of strings with city names of connections that are still open
         """
         return list(set(self.closed_connections).difference(self.connections))
-
 
 # TODO next below (test closeness theory with seed = 1)
 # Can an infection spread to a city nearby (location wise by coordinates) without them being connected via flightpath?

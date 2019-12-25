@@ -10,7 +10,7 @@ class MedicationInDevelopment(Event):
         """Creates a new object
 
         Arguments:
-            pathogen {dict} -- Pathogen medicated agains
+            pathogen {dict} -- Pathogen medicated
             sinceRound {int} -- Round started
             untilRound {[type]} -- Round it will be finished
         """

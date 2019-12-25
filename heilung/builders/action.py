@@ -58,7 +58,6 @@ class ActionBuilder:
                     action_list.append(DeployMedication(default_city, pathogen, possible_cities=possible_cities))
 
         # Written like this in case costs of any of these would change, alternative they could all use the "same" if
-        # Here no indication that these happened in the past exists, and so far these do not actually change values of a city
         # Every city is possible
         all_cities = self.game.cities_list
         if ava_points >= ApplyHygienicMeasures.get_costs():

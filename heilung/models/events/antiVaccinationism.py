@@ -9,6 +9,6 @@ class AntiVaccinationism(Event):
         """Initializes a new anti vax event object
 
         Arguments:
-            round {int} -- Round when this event occured
+            round {int} -- Round when this event occurred
         """
         super().__init__('antiVaccinationism', sinceRound)

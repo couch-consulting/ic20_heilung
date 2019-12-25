@@ -48,7 +48,6 @@ class Game:
         self.pathogens__with_developing_medication = self.pathogens_events_sub_list('medicationInDevelopment')
         self.pathogens_with_medication = self.pathogens_events_sub_list('medicationAvailable')
 
-
     def get_state_dict(self, short=True) -> dict:
         """
         Help function to get a dataset summarizing the the current state (filtered for only infected cities)
@@ -154,7 +153,6 @@ class Game:
         """
         return [city for _, city in self.cities.items() if not city.connections]
 
-
     # Pathogens state
     @property
     def pathogens_in_cities(self) -> List[Pathogen]:
@@ -177,7 +175,8 @@ class Game:
     def pathogens_in_need_of_medication(self) -> List[Pathogen]:
         """
         Get list of pathogens for which the current game still needs to develop medication
-            "needs to" is defined as: It is useful to develop this medication because the pathogen is still an active outbreak in at least one city
+        needs to is defined as: It is useful to develop this medication because the pathogen
+         is still an active outbreak in at least one city
         :return: List[Pathogen]
         """
         path_list1 = self.pathogens_in_cities
@@ -190,7 +189,8 @@ class Game:
     def pathogens_in_need_of_vaccine(self) -> List[Pathogen]:
         """
         Get list of pathogens for which the current game still needs to develop vaccines
-            "needs to" is defined as: It is useful to develop this medication because the pathogen is still an active outbreak in at least one city
+        needs to is defined as: It is useful to develop this medication
+        because the pathogen is still an active outbreak in at least one city
         :return: List[Pathogen]
         """
         path_list1 = self.pathogens_in_cities
@@ -238,7 +238,7 @@ class Game:
     def _get_percentage_of_immune(self, pathogen) -> int:
         """
         (To an extend an heuristic/biased approach to this feature)
-        Get the amount of all currently alive citizen which are not infected in a city with a outbreak and vaccine deployed
+        Get the amount of all currently alive citizen which are not infected in a city with a outbreak and vac deployed
         Whereby the people made immune by medication is assumed to be the worst case estimate
         :param pathogen: pathogen object
         :return: % of the immune as value between 0-1
@@ -257,12 +257,14 @@ class Game:
         non_outbreak_cities = [city for city in self.cities_list if city.outbreak is None]
         cities_with_vaccine = [city for city in non_outbreak_cities if [True for event in city.events if
                                                                         isinstance(event,
-                                                                                   VaccineDeployed) and event.pathogen == pathogen]]
+                                                                                   VaccineDeployed)
+                                                                        and event.pathogen == pathogen]]
         cities_with_medication_only = [city for city in non_outbreak_cities if
                                        city not in cities_with_vaccine and [True for event in city.events if
                                                                             isinstance(event,
-                                                                                       MedicationDeployed) and event.pathogen == pathogen]]
-        # additionally all population of all cities which were infected and are now healed, i.e. pathogen does not exist anymore
+                                                                                       MedicationDeployed)
+                                                                            and event.pathogen == pathogen]]
+        # all population of all cities which were infected and are now healed, i.e. pathogen does not exist anymore
         total_immune += sum([city.population for city in cities_with_vaccine])
         # if vac not but only medication assume 50% are immune
         total_immune += sum([city.population * 0.5 for city in cities_with_medication_only])
@@ -285,7 +287,6 @@ class Game:
                         city.connections]
         con_sorted = [con_tuple[0] for con_tuple in sorted(con_with_pop, key=lambda x: x[1], reverse=True)]
         return con_sorted
-
 
     # currently not used but could be useful later
     @property

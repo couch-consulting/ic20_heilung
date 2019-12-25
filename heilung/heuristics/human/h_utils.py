@@ -37,7 +37,7 @@ def helpful_events_list():
 
 def compute_pathogen_importance(pathogen_importance, pathogen_original):
     # Combine the importance of the property with its actual value
-    # Invert duration of orignal pathogen since a lower duration is more important
+    # Invert duration of original pathogen since a lower duration is more important
     return 1 * pathogen_importance.infectivity * pathogen_original.infectivity \
            + 1 * pathogen_importance.lethality * pathogen_original.lethality \
            + 1 * pathogen_importance.duration * (1 - pathogen_original.duration) \
@@ -46,7 +46,7 @@ def compute_pathogen_importance(pathogen_importance, pathogen_original):
 
 def compute_combined_importance(city_importance, action_list):
     """
-    Compure the importance of each element in the action list when releated back to its city importance
+    Compute the importance of each element in the action list when releated back to its city importance
     :param city_importance: importance of city
     :param action_list: list of tuples with action object and current rank
     :return: list of tuples with action object and adjusted rank
@@ -60,8 +60,3 @@ def compute_combined_importance(city_importance, action_list):
 
     return result
 
-# compute importance of actions? - keep in mind that cities without pathogen have much higher values hence we need to scale most likely
-# must be in sync with value of importance of developments
-# wichtigste stadt 260 (max # städte) punkte, wichtigste aktion 10 (max # actionen) punkte und ann addieren
-
-# ich muss skalieren, da mir meine berechneten werte lediglich eine klare reihenfolge an wichtigkeit angeben mehr nicht

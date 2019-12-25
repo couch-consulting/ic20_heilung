@@ -6,7 +6,7 @@ class ElectionsCalled(Event):
     """
 
     def __init__(self, round: int):
-        """Create an electionCaled event object
+        """Create an electionCalled event object
 
         Arguments:
             round {int} -- Round the event first occurred in

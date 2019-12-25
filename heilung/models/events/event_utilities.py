@@ -25,6 +25,7 @@ eventMap = {
     'vaccineInDevelopment': VaccineInDevelopment,
 }
 
+
 def convert_events(eventList: List[dict]) -> List[object]:
     """converts a list of events as dictionary to objects
 
