@@ -43,6 +43,12 @@ class Game:
         self.pathogen_percentage_of_infected = tmp_pathogen_percentage_of_infected
         self.pathogen_percentage_of_immune = tmp_pathogen_percentage_of_immune
 
+        self.pathogens__with_developing_vaccine = self.pathogens_events_sub_list('vaccineInDevelopment')
+        self.pathogens_with_vaccine = self.pathogens_events_sub_list('vaccineAvailable')
+        self.pathogens__with_developing_medication = self.pathogens_events_sub_list('medicationInDevelopment')
+        self.pathogens_with_medication = self.pathogens_events_sub_list('medicationAvailable')
+
+
     def get_state_dict(self, short=True) -> dict:
         """
         Help function to get a dataset summarizing the the current state (filtered for only infected cities)
@@ -166,38 +172,6 @@ class Game:
         :return: List[Pathogen]
         """
         return self.pathogens_events_sub_list('pathogenEncountered')
-
-    @property
-    def pathogens__with_developing_vaccine(self) -> List[Pathogen]:
-        """
-        Builds a list of pathogens for which a vaccine is in development
-        :return: List[Pathogen]
-        """
-        return self.pathogens_events_sub_list('vaccineInDevelopment')
-
-    @property
-    def pathogens_with_vaccine(self) -> List[Pathogen]:
-        """
-        Builds a list of pathogens for which a vaccine was developed
-        :return: List[Pathogen]
-        """
-        return self.pathogens_events_sub_list('vaccineAvailable')
-
-    @property
-    def pathogens__with_developing_medication(self) -> List[Pathogen]:
-        """
-        Builds a list of pathogens for which a medication is in development
-        :return: List[Pathogen]
-        """
-        return self.pathogens_events_sub_list('medicationInDevelopment')
-
-    @property
-    def pathogens_with_medication(self) -> List[Pathogen]:
-        """
-        Builds a list of pathogens for which a medication was developed
-        :return: List[Pathogen]
-        """
-        return self.pathogens_events_sub_list('medicationAvailable')
 
     @property
     def pathogens_in_need_of_medication(self) -> List[Pathogen]:

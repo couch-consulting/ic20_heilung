@@ -23,3 +23,13 @@ class DeployMedication(Action):
     @staticmethod
     def get_costs():
         return 10
+
+    @staticmethod
+    def is_possible(game, pathogen):
+        # "Is possible for in this game"
+        # (since medication can be deployed multiple times to a given city, the city is irrelevant)
+
+        # Has enough points, medication has been already developed
+        if game.points >= DeployMedication.get_costs() and pathogen in game.pathogens_with_medication:
+            return True
+        return False

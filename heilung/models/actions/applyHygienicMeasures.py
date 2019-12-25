@@ -20,3 +20,9 @@ class ApplyHygienicMeasures(Action):
     @staticmethod
     def get_costs():
         return 3
+
+    @staticmethod
+    def is_possible(game):
+        if game.points >= ApplyHygienicMeasures.get_costs():
+            return True
+        return False

@@ -13,3 +13,7 @@ class EndRound(Action):
     @staticmethod
     def get_costs():
         return 0
+
+    @staticmethod
+    def is_possible():
+        return True

@@ -21,3 +21,9 @@ class CallElections(Action):
     @staticmethod
     def get_costs():
         return 3
+
+    @staticmethod
+    def is_possible(game):
+        if game.points >= CallElections.get_costs():
+            return True
+        return False

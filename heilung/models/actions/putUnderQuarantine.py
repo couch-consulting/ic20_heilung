@@ -34,3 +34,12 @@ class PutUnderQuarantine(Action):
     @staticmethod
     def get_max_rounds(ava_points):
         return max(int((ava_points - 20) / 10), 0)
+
+    @staticmethod
+    def is_possible(game, num_rounds, city):
+        # "Is possible for this city"
+
+        # Has enough points, and has an airport at all and this airport is not closed
+        if game.points >= PutUnderQuarantine.get_costs(num_rounds) and not city.under_quarantine:
+            return True
+        return False

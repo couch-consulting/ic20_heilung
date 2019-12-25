@@ -38,3 +38,18 @@ class CloseConnection(Action):
     @staticmethod
     def get_max_rounds(ava_points):
         return max(int((ava_points - 3) / 3), 0)
+
+    @staticmethod
+    def is_possible(game, from_city, num_rounds, to_city=None):
+        # "Is possible for this city" + (optionally) "with this specified connection"
+
+        # Tmp var
+        open_con = from_city.open_connections
+        # Has enough points, and has at least one connection that is not closed
+        if game.points >= CloseConnection.get_costs(num_rounds) and open_con:
+            # (Optionally) and the specified connection exists
+            if to_city and to_city.name not in open_con:
+                # Check if not exists and if so return false, else usual return true is used
+                return False
+            return True
+        return False

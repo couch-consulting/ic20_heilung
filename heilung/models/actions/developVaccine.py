@@ -20,3 +20,14 @@ class DevelopVaccine(Action):
     @staticmethod
     def get_costs():
         return 40
+
+    @staticmethod
+    def is_possible(game, pathogen):
+        # "Is possible for this game"
+
+        # Game has enough points, the vaccine is not already developed and is not getting developed right now
+        if game.points >= DevelopVaccine.get_costs() and \
+                pathogen not in game.pathogens_with_vaccine \
+                and pathogen not in game.pathogens__with_developing_vaccine:
+            return True
+        return False

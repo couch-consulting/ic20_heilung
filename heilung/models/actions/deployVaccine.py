@@ -22,3 +22,14 @@ class DeployVaccine(Action):
     @staticmethod
     def get_costs():
         return 5
+
+    @staticmethod
+    def is_possible(game, pathogen, city):
+        # "Is possible for this city in this game"
+
+        # Has enough points, vaccine has been already developed and no vaccine has been deployed in this city so far
+        if game.points >= DeployVaccine.get_costs() \
+                and pathogen in game.pathogens_with_vaccine \
+                and pathogen not in city.deployed_vaccines:
+            return True
+        return False

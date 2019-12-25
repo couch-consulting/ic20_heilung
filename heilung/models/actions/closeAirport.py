@@ -34,3 +34,12 @@ class CloseAirport(Action):
     @staticmethod
     def get_max_rounds(ava_points):
         return max(int((ava_points - 15) / 5), 0)
+
+    @staticmethod
+    def is_possible(game, num_rounds, city):
+        # "Is possible for this city"
+
+        # Has enough points, and has an airport at all and this airport is not closed
+        if game.points >= CloseAirport.get_costs(num_rounds) and city.connections and not city.airport_closed:
+            return True
+        return False

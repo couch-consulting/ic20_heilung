@@ -126,6 +126,13 @@ class City:
 
         return mobility_lvl
 
+    @property
+    def open_connections(self):
+        """
+        Get open connection of the city
+        :return: List of strings with city names of connections that are still open
+        """
+        return list(set(self.closed_connections).difference(self.connections))
 
 
 # TODO next below (test closeness theory with seed = 1)
