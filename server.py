@@ -25,7 +25,7 @@ def index():
 
     # Human heuristic response
     human = Human(game)
-    response = human.get_decision()
+    response = human.get_decision()[0]  # 0 := most important
     print(response.build_action())
 
     # Example for random iterations

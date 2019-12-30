@@ -4,8 +4,8 @@
 class Scalegroup:
     """
     Class to keep values always in scale between 0-1
-    By instead of every increasing the values always decrease them
-    Thus compared to other instances it is the question: "Who was decreased the fewest"
+    By instead of ever increasing the values always decrease them
+    Thus compared to other values in the group it is the question: "Who was decreased the fewest"
     """
 
     def __init__(self, scale_group):
@@ -15,7 +15,7 @@ class Scalegroup:
         # Maybe use later
         self.inverted = []
 
-        # Define influence levels for less important dependencies
+        # Define influence levels
         self.influence_lvl1 = 0.1
         self.influence_lvl2 = 0.3
         self.influence_lvl3 = 0.5

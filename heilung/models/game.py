@@ -4,7 +4,7 @@ from typing import List, Tuple
 import networkx as nx
 
 from heilung.models import City
-from heilung.models.event import Event
+from heilung.models import events
 from heilung.models.events.medicationDeployed import MedicationDeployed
 from heilung.models.events.vaccineDeployed import VaccineDeployed
 
@@ -23,6 +23,7 @@ class Game:
         self.cities = {city[0]: City.from_dict(city[0], city[1]) for city in state['cities'].items()}
         self.events = convert_events(state.setdefault('events', list()))
         self.error = state.setdefault('error', '')
+        self.points_per_round = 20
 
         # Create a graph of all connections between cities
         self.connections = nx.Graph()
@@ -47,6 +48,24 @@ class Game:
         self.pathogens_with_vaccine = self.pathogens_events_sub_list('vaccineAvailable')
         self.pathogens__with_developing_medication = self.pathogens_events_sub_list('medicationInDevelopment')
         self.pathogens_with_medication = self.pathogens_events_sub_list('medicationAvailable')
+
+        # Construct a pat state dict for relevant pathogens
+        pat_state_dict = {pat.name: {'mDev': False, 'vDev': False, 'mAva': False, 'vAva': False} for pat in
+                          self.pathogens_in_cities}
+        # For each pat, a dict that states if the vaccine/medication is in development or already developed
+        for pat in self.pathogens_with_vaccine:
+            if pat in self.pathogens_in_cities:
+                pat_state_dict[pat.name]['vAva'] = True
+        for pat in self.pathogens__with_developing_vaccine:
+            if pat in self.pathogens_in_cities:
+                pat_state_dict[pat.name]['vDev'] = True
+        for pat in self.pathogens_with_medication:
+            if pat in self.pathogens_in_cities:
+                pat_state_dict[pat.name]['mAva'] = True
+        for pat in self.pathogens__with_developing_medication:
+            if pat in self.pathogens_in_cities:
+                pat_state_dict[pat.name]['mDev'] = True
+        self.pat_state_dict = pat_state_dict
 
     def get_state_dict(self, short=True) -> dict:
         """
@@ -287,6 +306,24 @@ class Game:
                         city.connections]
         con_sorted = [con_tuple[0] for con_tuple in sorted(con_with_pop, key=lambda x: x[1], reverse=True)]
         return con_sorted
+
+    @property
+    def last_development_finished_since(self):
+        """
+        Returns the number of rounds since the last development has been finished
+        :return: int between 0 and current number of round minus smallest development time or none if none yet finished
+        """
+        exists_flag = False
+        finished_since = 0
+        for event in self.events:
+            if isinstance(event, (events.MedicationAvailable, events.VaccineAvailable)):
+                exists_flag = True
+                tmp_finished_since = self.round - event.sinceRound
+                if tmp_finished_since > finished_since:
+                    finished_since = tmp_finished_since
+        if exists_flag:
+            return finished_since
+        return None
 
     # currently not used but could be useful later
     @property
