@@ -23,3 +23,4 @@ with subprocess.Popen(subprocess_cmd) as proc:
     client = subprocess.Popen([args.client_path, '-u', 'http://localhost:5000/', '-s', args.seed], stdout=subprocess.DEVNULL)
     client.wait()
     proc.terminate()
+print(f'Seed: {args.seed}')
