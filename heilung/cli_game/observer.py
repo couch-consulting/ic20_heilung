@@ -15,10 +15,11 @@ class Observer:
     actions = list()
     state_recaps = list()
 
-    def __init__(self, game: 'Game', action: 'Action'):
+    def __init__(self, game: 'Game', action: 'Action', seed: str):
         self.game = game
+        self.seed = seed
 
-        self.load_state()
+        self.load_state(seed)
 
         if game.error != '':
             self.errors.append(game.error)
@@ -40,13 +41,13 @@ class Observer:
                 self.encountered_pathogens[pathogen.name] = pathogen.to_dict()
             self.global_events[event.type] = event.to_dict()
 
-        self.save_state()
+        self.save_state(seed)
 
-    def load_state(self):
+    def load_state(self, seed: str):
         """load the last observations from disk
         """
-        if isfile('observer.json'):
-            with open('observer.json', 'r') as f:
+        if isfile(f'observations/observer-{seed}.json'):
+            with open(f'observations/observer-{seed}.json', 'r') as f:
                 data = json.load(f)
                 self.encountered_pathogens = data['encountered_pathogens']
                 self.encountered_happenings = data['encountered_happenings']
@@ -56,10 +57,10 @@ class Observer:
                 self.actions = data.get('actions', list())
                 self.state_recaps = data.get('state_recaps', list())
 
-    def save_state(self):
+    def save_state(self, seed: str):
         """Save observations to disk
         """
-        with open('observer.json', 'w') as f:
+        with open(f'observations/observer-{seed}.json', 'w') as f:
             data = {
                 'encountered_pathogens': self.encountered_pathogens,
                 'encountered_happenings': self.encountered_happenings,

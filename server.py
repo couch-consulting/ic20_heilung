@@ -1,3 +1,5 @@
+import argparse
+
 from flask import Flask, abort, g, request
 
 from heilung.builders.action import ActionBuilder
@@ -34,10 +36,16 @@ def index():
     # response = action_builder.random_action(action_list)
 
     # Observer
-    obs = Observer(game, response)
+    obs = Observer(game, response, app.config['SEED'])
 
     return response.build_action()
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Server')
+    parser.add_argument('--seed', type=str, help='A custom seed to know for observation purposes', default='unknown')
+
+    args = parser.parse_args()
+    app.config['SEED'] = args.seed
+
     app.run()
