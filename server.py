@@ -22,18 +22,21 @@ def index():
 
     game = Game(request.json)
 
-    # Temporary to monitor round change
-    print(game.state_recap(short=True))
-
+    # Heuristics
     # Human heuristic response
     human = Human(game)
     response = human.get_decision()[0]  # 0 := most important
-    print(response.build_action())
 
-    # Example for random iterations
+    # # Example for random iterations
     # action_builder = ActionBuilder(game)
     # action_list = action_builder.get_actions()
     # response = action_builder.random_action(action_list)
+
+    # Output
+    if not app.config['SILENT'] or game.outcome in ['win', 'loss']:
+        # Temporary to monitor round change
+        print(game.state_recap(short=True))
+        print(response.build_action())
 
     # Observer
     obs = Observer(game, response, app.config['SEED'])
@@ -44,8 +47,10 @@ def index():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Server')
     parser.add_argument('--seed', type=str, help='A custom seed to know for observation purposes', default='unknown')
+    parser.add_argument('--silent', help='Print only the final round', action='store_true')
 
     args = parser.parse_args()
     app.config['SEED'] = args.seed
+    app.config['SILENT'] = args.silent
 
     app.run()
