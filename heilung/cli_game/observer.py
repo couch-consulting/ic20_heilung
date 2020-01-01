@@ -26,7 +26,7 @@ class Observer:
 
         if len(self.state_recaps) == 0 or self.state_recaps[-1]['round'] != game.round:
             self.state_recaps.append(game.get_state_dict())
-        self.actions.append(action.type)
+        self.actions.append(str(action.build_action()))
 
         for _, outbreak in game.outbreaks:
             self.encountered_pathogens[outbreak.pathogen.name] = outbreak.pathogen.to_dict()
