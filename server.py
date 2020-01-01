@@ -11,6 +11,7 @@ from heilung.models import Game
 app = Flask(__name__)
 
 action_plan = list()
+last_state_dic = {}
 
 
 @app.route('/', methods=['POST'])
@@ -23,6 +24,12 @@ def index():
 
     game = Game(request.json)
 
+    if game.outcome in ['win', 'loss']:
+        # Save Results
+        global last_state_dic
+        last_state_dic['outcome'] = game.outcome
+        last_state_dic['rounds'] = game.round
+
     # Heuristics
     # Human heuristic response
     human = Human(game)
@@ -34,7 +41,7 @@ def index():
     # response = action_builder.random_action(action_list)
 
     # Output
-    if (not app.config['SHORT'] or game.outcome in ['win', 'loss']) and not app.config['SILENT']:
+    if not app.config['SILENT']:
         # Temporary to monitor round change
         print(game.state_recap(short=True))
         print(response.build_action())
@@ -45,15 +52,19 @@ def index():
     return response.build_action()
 
 
+@app.route('/last_state', methods=['GET'])
+def last_state():
+    global last_state_dic
+    return last_state_dic
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Server')
     parser.add_argument('--seed', type=str, help='A custom seed to know for observation purposes', default='unknown')
-    parser.add_argument('--short', help='Print only a view game details', action='store_true')
     parser.add_argument('--silent', help='Remove any output of the game', action='store_true')
 
     args = parser.parse_args()
     app.config['SEED'] = args.seed
-    app.config['SHORT'] = args.short
     app.config['SILENT'] = args.silent
 
     if args.silent:
