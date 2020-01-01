@@ -108,14 +108,11 @@ class Human:
                     # The more people are infected the less important is vaccine
                     global_action_scale.decrease_on_dependency(adapted_pathogen_name,
                                                                total_infected * global_action_scale.influence_lvl3)
-                    # The less people are immune the more important is vaccine - change this if vaccine is to dominate
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
-                                                               (1 - total_immune) * global_action_scale.influence_lvl3)
 
-                    # Decrease importance if medication is already developed or in development
-                    global_action_scale.decrease_on_dependency(adapted_pathogen_name,
-                                                               int(
-                                                                   not medication_state) * global_action_scale.influence_lvl2)
+                    # # The less people are immune the more important is vaccine - TODO change this if vaccine is to dominate
+                    # global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                    #                                            (1 - total_immune) * global_action_scale.influence_lvl2)
+
                 else:
                     global_action_scale.sg[adapted_pathogen_name] = 0
             else:
@@ -124,30 +121,27 @@ class Human:
                     # The less mobile the pathogen, the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                (
-                                                                       1 - pathogen.mobility) * global_action_scale.influence_lvl2)
+                                                                           1 - pathogen.mobility) * global_action_scale.influence_lvl2)
                     # The shorter the duration of the pathogen the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                (
-                                                                       1 - pathogen.duration) * global_action_scale.influence_lvl2)
+                                                                           1 - pathogen.duration) * global_action_scale.influence_lvl2)
                     # The more lethal the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
-                                                               pathogen.lethality * global_action_scale.influence_lvl2)
+                                                               pathogen.lethality * global_action_scale.influence_lvl3)
                     # The less infective the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                (
-                                                                       1 - pathogen.infectivity) * global_action_scale.influence_lvl2)
+                                                                           1 - pathogen.infectivity) * global_action_scale.influence_lvl2)
 
                     # The more people are infected the more important is medication
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                total_infected * global_action_scale.influence_lvl3)
-                    # The less people are immune the less-more important is medication,change this if vaccine is to dominate
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
-                                                               total_immune * global_action_scale.influence_lvl3)
 
-                    # Decrease importance if vaccine is already developed or in development
-                    global_action_scale.decrease_on_dependency(adapted_pathogen_name,
-                                                               int(
-                                                                   not vaccine_state) * global_action_scale.influence_lvl2)
+                    # # The less people are immune the less-more important is medication, TODO change this if vaccine is to dominate
+                    # global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                    #                                            total_immune * global_action_scale.influence_lvl2)
+
                 else:
                     global_action_scale.sg[adapted_pathogen_name] = 0
 
@@ -274,7 +268,7 @@ class Human:
                                                     (1 - pathogen.duration) * action_scale.influence_lvl2)
                 # The more lethal the more important
                 action_scale.increase_on_dependency('deploy_medication',
-                                                    pathogen.lethality * action_scale.influence_lvl2)
+                                                    pathogen.lethality * action_scale.influence_lvl3)
                 # The less infective the more important
                 action_scale.increase_on_dependency('deploy_medication',
                                                     (1 - pathogen.infectivity) * action_scale.influence_lvl2)
