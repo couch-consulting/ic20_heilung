@@ -36,6 +36,15 @@ class Game:
         self.cities_list = [city for _, city in self.cities.items()]
         self.biggest_city = max(self.cities_list, key=lambda x: x.population)
 
+        pathogen_names_in_cities = {outbreak.pathogen.name for _, outbreak in self.outbreaks}
+        self.pathogens_in_cities = [pathogen for pathogen in self.pathogens_encountered if
+                                    pathogen.name in pathogen_names_in_cities]
+
+        tmp_cities_with_pathogen = {}
+        for pathogen in self.pathogens_in_cities:
+            tmp_cities_with_pathogen[pathogen.name] = self._get_cities_with_pathogen(pathogen)
+        self.cities_with_pathogen = tmp_cities_with_pathogen
+
         tmp_pathogen_percentage_of_infected = {}
         tmp_pathogen_percentage_of_immune = {}
         for pathogen in self.pathogens_in_cities:
@@ -140,6 +149,17 @@ class Game:
         return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
 
     @property
+    def has_new_bioTerrorism(self) -> City or None:
+        for city in self.cities.values():
+            if city.has_event(events.BioTerrorism):
+                for event in city.events:
+                    if event.type == 'bioTerrorism' and event.sinceRound == self.round and True not in \
+                            self.pat_state_dict[event.pathogen.name].values() and not (
+                            city.under_quarantine or city.airport_closed):
+                        return city
+        return None
+
+    @property
     def total_population(self) -> int:
         return reduce(lambda a, b: a + b, [city.population for _, city in self.cities.items()])
 
@@ -147,12 +167,14 @@ class Game:
 
     # Cities state
     def get_cities_with_pathogen(self, pathogen) -> List[City]:
+        return self.cities_with_pathogen[pathogen.name]
+
+    def _get_cities_with_pathogen(self, pathogen) -> List[City]:
         """
         Build list of cities in which the given pathogen in present
         :param pathogen: pathogen object
         :return: List[City]
         """
-
         return [city for _, city in self.cities.items() if city.outbreak if
                 city.outbreak.pathogen.name == pathogen.name]
 
@@ -173,14 +195,6 @@ class Game:
         return [city for _, city in self.cities.items() if not city.connections]
 
     # Pathogens state
-    @property
-    def pathogens_in_cities(self) -> List[Pathogen]:
-        """
-        Build a list of pathogens which are infecting cities currently
-        :return: List[Pathogen]
-        """
-        pathogen_names_in_cities = {outbreak.pathogen.name for _, outbreak in self.outbreaks}
-        return [pathogen for pathogen in self.pathogens_encountered if pathogen.name in pathogen_names_in_cities]
 
     @property
     def pathogens_encountered(self) -> List[Pathogen]:
@@ -290,9 +304,9 @@ class Game:
 
         return 1 / total_pop * total_immune
 
-    def has_event(self, action_object):
+    def has_event(self, event_object):
         for event in self.events:
-            if isinstance(event, action_object):
+            if isinstance(event, event_object):
                 return True
         return False
 
@@ -324,6 +338,19 @@ class Game:
         if exists_flag:
             return finished_since
         return None
+
+    @property
+    def duration_candidate_cities(self) -> List[City]:
+        """
+        Returns a list of cities which have a small duration and either very small population or high population
+        """
+        candidate_cities = []
+        for pathogen in self.pathogens_in_cities:
+            if pathogen.duration <= 0.25 and pathogen.mobility > 0:
+                for city in self.get_cities_with_pathogen(pathogen):
+                    if not (city.airport_closed or city.under_quarantine):
+                        candidate_cities.append(city)
+        return candidate_cities
 
     # currently not used but could be useful later
     @property
