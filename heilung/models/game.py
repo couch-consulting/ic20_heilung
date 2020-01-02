@@ -65,10 +65,13 @@ class Game:
                 'vDev': pat in self.pathogens__with_developing_vaccine,
                 'mAva': pat in self.pathogens_with_medication,
                 'vAva': pat in self.pathogens_with_vaccine,
-                'prevalence': self._get_percentage_of_infected(pathogen),
-                'immunity':self._get_percentage_of_immune(pathogen)
-                } for pat in self.pathogens_in_cities
-            }
+                'any_action': pat in (
+                        self.pathogens__with_developing_medication + self.pathogens__with_developing_vaccine
+                        + self.pathogens_with_medication + self.pathogens_with_vaccine),
+                'prevalence': self._get_percentage_of_infected(pat),
+                'immunity': self._get_percentage_of_immune(pat)
+            } for pat in self.pathogens_in_cities
+        }
 
     def get_state_dict(self, short=True) -> dict:
         """
@@ -147,8 +150,8 @@ class Game:
         for city in self.cities.values():
             if city.has_event(events.BioTerrorism):
                 for event in city.events:
-                    if event.type == 'bioTerrorism' and event.sinceRound == self.round and True not in \
-                            self.pat_state_dict[event.pathogen.name].values() and not (
+                    if event.type == 'bioTerrorism' and event.sinceRound == self.round and \
+                            not self.pat_state_dict[event.pathogen.name]['any_action'] and not (
                             city.under_quarantine or city.airport_closed):
                         return city
         return None
