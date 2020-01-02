@@ -59,22 +59,16 @@ class Game:
         self.pathogens_with_medication = self.pathogens_events_sub_list('medicationAvailable')
 
         # Construct a pat state dict for relevant pathogens
-        pat_state_dict = {pat.name: {'mDev': False, 'vDev': False, 'mAva': False, 'vAva': False} for pat in
-                          self.pathogens_in_cities}
-        # For each pat, a dict that states if the vaccine/medication is in development or already developed
-        for pat in self.pathogens_with_vaccine:
-            if pat in self.pathogens_in_cities:
-                pat_state_dict[pat.name]['vAva'] = True
-        for pat in self.pathogens__with_developing_vaccine:
-            if pat in self.pathogens_in_cities:
-                pat_state_dict[pat.name]['vDev'] = True
-        for pat in self.pathogens_with_medication:
-            if pat in self.pathogens_in_cities:
-                pat_state_dict[pat.name]['mAva'] = True
-        for pat in self.pathogens__with_developing_medication:
-            if pat in self.pathogens_in_cities:
-                pat_state_dict[pat.name]['mDev'] = True
-        self.pat_state_dict = pat_state_dict
+        self.pat_state_dict = {
+            pat.name: {
+                'mDev': pat in self.pathogens__with_developing_medication,
+                'vDev': pat in self.pathogens__with_developing_vaccine,
+                'mAva': pat in self.pathogens_with_medication,
+                'vAva': pat in self.pathogens_with_vaccine,
+                'prevalence': self._get_percentage_of_infected(pathogen),
+                'immunity':self._get_percentage_of_immune(pathogen)
+                } for pat in self.pathogens_in_cities
+            }
 
     def get_state_dict(self, short=True) -> dict:
         """

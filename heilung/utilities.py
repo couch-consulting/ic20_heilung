@@ -10,7 +10,7 @@ GRADE_MAPPING = {
 
 
 def grade_to_scalar(grade: str) -> float:
-    """Converts the used "grades" (--, -, o, +, ++) to a value between 0 and 4
+    """Converts the used "grades" (--, -, o, +, ++) to a value between 0 and 1
 
     Arguments:
         grade {str} -- The grade from the request
