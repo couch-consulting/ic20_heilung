@@ -48,7 +48,7 @@ def index():
         print(response.build_action())
 
     # Observer
-    Observer(game, response, app.config['SEED'])
+    # Observer(game, response, app.config['SEED'])
 
     return response.build_action()
 
@@ -69,6 +69,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Server')
     parser.add_argument('--seed', type=str, help='A custom seed to know for observation purposes', default='unknown')
     parser.add_argument('--silent', help='Remove any output of the game', action='store_true')
+    parser.add_argument('--port', type=str, help='Port for server', default='5000')
 
     args = parser.parse_args()
     app.config['SEED'] = args.seed
@@ -83,4 +84,4 @@ if __name__ == '__main__':
         cli = sys.modules['flask.cli']
         cli.show_server_banner = lambda *x: None
 
-    app.run()
+    app.run(port=args.port)
