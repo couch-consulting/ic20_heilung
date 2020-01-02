@@ -121,18 +121,18 @@ class Human:
                     # The less mobile the pathogen, the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                (
-                                                                           1 - pathogen.mobility) * global_action_scale.influence_lvl2)
+                                                                       1 - pathogen.mobility) * global_action_scale.influence_lvl2)
                     # The shorter the duration of the pathogen the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                (
-                                                                           1 - pathogen.duration) * global_action_scale.influence_lvl2)
+                                                                       1 - pathogen.duration) * global_action_scale.influence_lvl2)
                     # The more lethal the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                pathogen.lethality * global_action_scale.influence_lvl3)
                     # The less infective the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                (
-                                                                           1 - pathogen.infectivity) * global_action_scale.influence_lvl2)
+                                                                       1 - pathogen.infectivity) * global_action_scale.influence_lvl2)
 
                     # The more people are infected the more important is medication
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
@@ -199,18 +199,6 @@ class Human:
                     'launch_campaign': 1, 'deploy_vaccine': 1, 'deploy_medication': 1}
         action_scale = Scalegroup(tmp_dict)
 
-        # TODO see if this bias should be reactivated when testing later - currently disabeld due to doulbed bias
-        # # Apply base bias - to an extend this represent a predefined gameplan for this city (could be merged with above)
-        # action_scale.apply_bias('deploy_vaccine', 0.8)
-        # action_scale.apply_bias('deploy_medication', 0.7)
-        #
-        # action_scale.apply_bias('reduce_city_mob', 0.65)
-        #
-        # action_scale.apply_bias('launch_campaign', 0.5)
-        # action_scale.apply_bias('exert_influence', 0.5)
-        # action_scale.apply_bias('apply_hyg_msr', 0.5)
-        # action_scale.apply_bias('call_elections', 0.5)
-
         # Pathogen/outbreak rank influence
         if city.outbreak:
             # Collect pathogen values
@@ -229,15 +217,17 @@ class Human:
             action_scale.increase_on_dependency('reduce_city_mob', pathogen.mobility * action_scale.influence_lvl2)
             # The shorter the duration of the pathogen the more important
             action_scale.increase_on_dependency('reduce_city_mob',
-                                                (1 - pathogen.duration) * action_scale.influence_lvl2)
+                                                (1 - pathogen.duration) * action_scale.influence_lvl3)
             # The lower the population the more important to reduce city mobility
             action_scale.increase_on_dependency('reduce_city_mob', (1 - compared_pop) * action_scale.influence_lvl2)
             # The older the pathogen the less important to reduce its mobility
             action_scale.decrease_on_dependency('reduce_city_mob', outbreak_lifetime * action_scale.influence_lvl3)
+
             # TODO implement neighbor check with infected and immune % (the higher immune and already infected neighbors the less important reduce city mobility/the less infected or immune the more important)
             # TODO implement hardcode 100% reduction if city very small and high pathogen importance with lwo duration high lethatily
 
             # Weigh Vaccine
+
             if vac_state:
                 # The more mobile the pathogen, the more important to deploy the vaccine
                 action_scale.increase_on_dependency('deploy_vaccine', pathogen.mobility * action_scale.influence_lvl2)
@@ -537,16 +527,21 @@ class Human:
         # Get scale of reduce city mob and decide depending on this scale for subactions of city mobility
         # Get and remove reduce city mob
         reduce_mob_rank = action_scale.sg.pop('reduce_city_mob')
-        tmp_per = h_utils.compute_percentage(action_scale.max_val, reduce_mob_rank)
-        # Depending on the importance of this action group, define the importance of actual actions
-        if tmp_per <= 0.25:
-            close_connection = reduce_mob_rank
-            close_airport = reduce_mob_rank * 0.75
-            put_under_quarantine = reduce_mob_rank * 0.5
-        elif tmp_per <= 0.6:
-            close_connection = reduce_mob_rank * 0.5
-            close_airport = reduce_mob_rank
-            put_under_quarantine = reduce_mob_rank * 0.75
+        if city.outbreak:
+            mobility = city.outbreak.pathogen.mobility
+            # Depending on the mobility itself, define the importance of actual actions
+            if mobility < 0.25:
+                close_connection = reduce_mob_rank
+                close_airport = reduce_mob_rank * 0.75
+                put_under_quarantine = reduce_mob_rank * 0.5
+            elif mobility <= 0.5:
+                close_connection = reduce_mob_rank * 0.5
+                close_airport = reduce_mob_rank
+                put_under_quarantine = reduce_mob_rank * 0.75
+            else:
+                close_connection = reduce_mob_rank * 0.5
+                close_airport = reduce_mob_rank * 0.75
+                put_under_quarantine = reduce_mob_rank
         else:
             close_connection = reduce_mob_rank * 0.5
             close_airport = reduce_mob_rank * 0.75
@@ -612,68 +607,260 @@ class Human:
         action_scale.sg['close_airport'] = (action_scale.sg['close_airport'], close_airport_rounds)
         action_scale.sg['put_under_quarantine'] = (action_scale.sg['put_under_quarantine'], put_under_quarantine_rounds)
 
-    def select_action_for_points(self, sorted_action_list, points):
+    def build_action_list(self, sorted_city_action, sorted_global_actions):
         """
-        Logic for spending the specified amount of points
-        :param sorted_action_list:
-        :param points:
+        Build a list of actions whereby the first one is the most important action to perform in this round
+        :param sorted_city_action: all city specific actions and a rank whereby the highest rank = most important
+        :param sorted_global_actions: all possible global actions
+        :return: List of tuples of actions and values
+        """
+
+        # Tmp vars
+        city_with_bio_terrorism = self.game.has_new_bioTerrorism
+        ava_points = self.game.points
+        saved_points = 0
+
+        # Build up fall back points for bio terrorism
+        if self.game.round >= 10:
+            ava_points -= 20
+            saved_points = 20
+
+        if ava_points <= 0:
+            best_action = actions.EndRound()
+        # Round 1 Gameplan - special because guaranteed to have 40 points and early in game
+        elif self.game.round == 1:
+            # Follow up action from previous round 1 steps
+            if self.pat_with_med_dev:
+                # Guarantees that if medication was chosen to be first action of this round,
+                # that afterwards the best city action is chosen
+                best_action = self.get_best_city_action(sorted_city_action, ava_points)
+            elif ava_points < 40:
+
+                # Follow up logic for candidate city action
+                candidate_cities = self.game.duration_candidate_cities
+                if candidate_cities:
+                    best_action = self.get_action_for_candidate_cities(candidate_cities, ava_points)
+                    if not best_action:
+                        best_action = actions.EndRound()
+                else:
+                    # Guarantees that if previously action was to wait 1 round before developing vaccine
+                    # that it actually waits after performing the action
+                    best_action = actions.EndRound()
+            else:
+                # Else First action in first round
+                # Get all cities in which the mobility must be reduced
+                candidate_cities = self.game.duration_candidate_cities
+                if candidate_cities:
+                    best_action = self.get_action_for_candidate_cities(candidate_cities, ava_points)
+                elif isinstance(sorted_global_actions[0][0], actions.DevelopMedication):
+                    # If medication most important,develop it - follow up: do some action
+                    best_action = sorted_global_actions[0][0]
+                else:
+                    # only happens if no candidate city
+                    # if vaccine is most important, do best action and choose what to develop in the following round
+                    # Since global actions are only develop medication or develop vaccine, this else is fine for now
+                    # Follow up: end round (wait)
+                    best_action = self.get_best_city_action(sorted_city_action, ava_points,
+                                                            points_needed=actions.DevelopVaccine.get_costs())
+
+        # Bio Terrorism game plan
+        elif city_with_bio_terrorism:
+            # Get real number of points to counter bio terrorism attack
+            actual_points = saved_points + ava_points
+            best_action = self.get_action_for_low_duration_city(city_with_bio_terrorism, actual_points)
+            if not best_action:
+                best_action = self.get_best_city_action(sorted_city_action, actual_points)
+
+        # Round X Gameplan
+        else:
+            isolated_cities = []
+            for pathogen in self.game.pathogens_in_cities:
+                if len(self.game.get_cities_with_pathogen(pathogen)) == 1:
+                    # Get new infected or isolated city
+                    tmp_city = self.game.get_cities_with_pathogen(pathogen)[0]
+                    isolated_cities.append(tmp_city)
+
+            if isolated_cities:
+                # Get real number of points to avoid having not isolated cities
+                actual_points = saved_points + ava_points
+                best_action = self.get_action_for_isolated_cities(isolated_cities, actual_points, sorted_city_action)
+
+            elif not sorted_global_actions:
+                # If no global actions anymore, do most important city action
+                best_action = self.get_best_city_action(sorted_city_action, ava_points)
+            else:
+                best_action = self.get_action_for_global_actions(sorted_city_action, sorted_global_actions, ava_points)
+
+        return [best_action]
+
+    def plan_global_action(self, global_action, sorted_city_action, ava_points):
+        """
+        'Schedules" to return the desired global action, if enough points available, it will be returned immediately
+        if not either the round will be ended
+        or an action using the points that are not used is played such that next round this action is still possible
+        :param global_action: a global action which is ready to be build
+        :param sorted_city_action: sorted city action list (tuples of action and importance value)
+        :return: action to perform to achieve doing this action now or later
+        """
+        action = global_action
+        # get costs - no need to check other get_costs instances since all global actions have constant costs
+        costs = global_action.get_costs()
+
+        # Check if selected global action is possible
+        if ava_points < costs:
+            # If not, select an action that makes it possible when just waiting next time
+            action = self.get_best_city_action(sorted_city_action, ava_points, points_needed=costs)
+            # This works because the select action will see that no points to play exists in the 2nd time triggering
+            # and thus just ends the round
+
+        return action
+
+    def get_action_for_candidate_cities(self, candidate_cities, points_to_spend):
+        """
+        Return the best action for cities infected with a low duration pathogen
+        :param candidate_cities:
+        :param points_to_spend:
         :return:
         """
+        # sort for biggest city first
+        candidate_cities = sorted(candidate_cities, key=lambda x: x.population, reverse=True)
+        # Sort for most important pathogen
+        city = sorted(candidate_cities, key=lambda x: h_utils.compute_pathogen_importance(
+            self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen))[0]
 
-        most_important_action = sorted_action_list[0][0]
+        return self.get_action_for_low_duration_city(city, points_to_spend)
 
-        # Basic idea
-        if most_important_action.costs <= points:
-            # Do most important if possible
-            return most_important_action
-        elif most_important_action.recalculate_costs_for_points(points).costs <= points:
-            return most_important_action
+    def get_action_for_low_duration_city(self, city, points_to_spend):
+        max_rounds_for_points = actions.PutUnderQuarantine.get_max_rounds(points_to_spend)
+        max_rounds_for_points_airport = actions.CloseAirport.get_max_rounds(points_to_spend)
 
-        # Recalculate for all actions (only changes the value if it would become possible only due to the adjustment)
-        recalc_actions = [(action.recalculate_costs_for_points(points), importance)
-                          for (action, importance) in sorted_action_list]
-        # Find best possible action in list for points whereby reduce mobility action costs are fitted to ava points
-        possible_actions_for_points = [action for (action, importance) in recalc_actions if action.costs <= points]
+        if not max_rounds_for_points and not max_rounds_for_points_airport:
+            # Nothing possible
+            return None
 
-        if possible_actions_for_points:
-            # Return most important of these actions
-            return possible_actions_for_points[0]
+        # No need to check if already closed/under quarantine since first round)
+        if city.outbreak.pathogen.infectivity > 0.25:
+            # If high infectivity or no airport put under quarantin
+            if city.outbreak.pathogen.mobility >= 0.5 or not city.connections:
+                if max_rounds_for_points:
+                    return actions.PutUnderQuarantine(city, max_rounds_for_points)
+
+                if not city.connections:
+                    return None
+
+                return actions.CloseAirport(city, max_rounds_for_points_airport)
+
+            return actions.CloseAirport(city, max_rounds_for_points_airport)
+
+        # else just try to close airport
+        if not city.connections:
+            # No airport
+            if max_rounds_for_points:
+                # try quarantine for 1 round
+                return actions.PutUnderQuarantine(city, 1)
+
+            # nothing possible
+            return None
+
+        return actions.CloseAirport(city, 1)
+
+    def get_action_for_isolated_cities(self, isolated_cities, ava_points, sorted_city_action):
+        still_isolated = [city for city in isolated_cities if city.under_quarantine or city.airport_closed]
+        no_isolation_present = [city for city in isolated_cities if city not in still_isolated]
+
+        if no_isolation_present:
+            # Sort for most important pathogen
+            city = sorted(no_isolation_present, key=lambda x: h_utils.compute_pathogen_importance(
+                self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen))[0]
+
+            tmp_num_rounds = actions.PutUnderQuarantine.get_max_rounds(ava_points)
+            tmp_num_rounds_airport = actions.CloseAirport.get_max_rounds(ava_points)
+            if (tmp_num_rounds and city.outbreak.pathogen.mobility >= 0.5) or not city.connections:
+                # Put under quarantine possible
+                best_action = actions.PutUnderQuarantine(city, tmp_num_rounds)
+            elif tmp_num_rounds_airport:
+                # Close airport possible
+                best_action = actions.CloseAirport(city, tmp_num_rounds_airport)
+            else:
+                best_action = self.get_best_city_action(sorted_city_action, ava_points)
         else:
-            # Not enough points for any action
-            return actions.EndRound()
+            # all isolated cities are still isolated
+            points_needed_in_future = actions.CloseAirport.get_costs(5)
+            for city in still_isolated:
+                if city.under_quarantine:
+                    points_needed_in_future = actions.PutUnderQuarantine.get_costs(2)
+                    break
 
-        # TODO rewrite accordingly like this below
-        # X amount of points to spend, list of all possible action not selected for points
-        # sort for points first if none just end
-        # else think about how to select doing simple task or wait for bigger task (importance dif)
-        # # Logic for spending points
-        # important_actions_length = len(self.game.cities_infected)
-        #
-        #
-        # for (action, importance) in sorted_action_list[:5]:
-        #     # Check if possible
-        #     if points >= action.costs:
-        #         best_city_action = action
-        #         break
-        # else:
-        #     # None of the top actions where possible
-        #
-        #     # Select most important action of list
-        #     most_important_action = sorted_action_list[0][0]
-        #
-        #     # Do action such that next round actual most important would be possible
-        #     # TODO adapt this since not only this is teh points needed because in loop with other points needed
-        #     # tmp_points_needed = points_per_round+(ava_points - most_important_action.costs)
-        #     best_city_action = self.get_best_city_action(sorted_action_list, points_needed=most_important_action.costs)
-        # rewirte above such that it does not go ahead and select best of top 5 and only in specific case but tries to get best one somehow first
-        #   since this would result in bimbo action all the time and that would be bad rather go to wait or something
-        # break if less than 3 points shall be spend (or go into select for next and that will make it break)
-        # problem: how to know that not only high score actions in sorted action list which is getting checked if it is possible
-        # TODO improvements:
+            if ava_points > points_needed_in_future:
+                # more points than needed in future, do something with them
+                best_action = self.get_best_city_action(sorted_city_action, ava_points,
+                                                        points_needed=points_needed_in_future)
+            else:
+                # need more points, hence wait for them
+                best_action = actions.EndRound()
 
-        # if important dif to nachfolger und nachnachfolger less than 5%/10% each and both would be possible for same or less points do first of them
+        return best_action
 
-    def get_best_city_action(self, sorted_action_list, points_needed=0):
+    def get_action_for_global_actions(self, sorted_city_action, sorted_global_actions, ava_points):
+        # Get features needed for decisions below
+        # Tmp var for medi or vac is developing for at least one pathogen
+        tmp_var_developing = False
+        tmp_var_developed = True
+        # Tmp var for medi or vac is developing/developed for at least one pathogen
+        tmp_var_developing_or_developed = True
+        tmp_overall_state_dict = {}
+        tmp_developed_state_dict = {}
+        for pat_name, state_dict in self.game.pat_state_dict.items():
+            developing_state = (state_dict['mDev'] or state_dict['vDev'])
+            developed_state = (state_dict['mAva'] or state_dict['vAva'])
+            overall_state = (developing_state or developed_state)
+            # Save for later
+            tmp_developed_state_dict[pat_name] = developed_state
+            tmp_overall_state_dict[pat_name] = overall_state
+            # Becomes true if at least one is developing
+            tmp_var_developing = tmp_var_developing or developing_state
+            # Stays true if every pas has either medication or vaccine developed
+            tmp_var_developed = tmp_var_developed and developed_state
+            # Stays True if every pat has at least medication or vaccine developing or developed
+            tmp_var_developing_or_developed = tmp_var_developing_or_developed and overall_state
+
+        if tmp_var_developing:
+            # If at least one medication or vaccine is still developing
+            if tmp_var_developing_or_developed:
+                # and each pathogen has a medication or a vaccine in development or already developed
+                # Do best city action
+                best_action = self.get_best_city_action(sorted_city_action, ava_points)
+            else:
+                # and not each pathogen has a medication or a vaccine in development or already developed
+                # Do best global action (i.e. develop a medication or vaccine for a so far not considered pathogen
+                # Filter out actions for pathogens which are already developing or developed
+                filtered_global_actions = [tmp_action for (tmp_action, _) in sorted_global_actions
+                                           if not tmp_overall_state_dict[tmp_action.parameters['pathogen']]]
+                # Resulting list can not be empty since this would result in the previous if being true, further order is preserved
+                # Thus simply get new most important by taking the first one
+
+                best_action = self.plan_global_action(filtered_global_actions[0], sorted_city_action, ava_points)
+        else:
+            # If non is currently developing
+            if not tmp_var_developed:
+                # and not each pathogen has either medication or vaccine developed
+                filtered_global_actions = [tmp_action for (tmp_action, _) in sorted_global_actions
+                                           if not tmp_developed_state_dict[tmp_action.parameters['pathogen']]]
+                best_action = self.plan_global_action(filtered_global_actions[0], sorted_city_action, ava_points)
+            else:
+                # and each pathogen has either medication or vaccine developed
+
+                # [dynamic max] do city action or best global action if last development finished 5 round agao
+                # no check for none, it is impossible that this gets executed when no development has finished
+                if self.game.last_development_finished_since >= 5:
+                    # TODO test other settings or flags here (e.g. importance)
+                    best_action = self.plan_global_action(sorted_global_actions[0][0], sorted_city_action, ava_points)
+                else:
+                    best_action = self.get_best_city_action(sorted_city_action, ava_points)
+
+        return best_action
+
+    def get_best_city_action(self, sorted_action_list, ava_points, points_needed=0):
         """
         Get most important action of a given sorted action list
         and optionally consider how much point shall be available in the future
@@ -681,8 +868,6 @@ class Human:
         :param points_needed: points needed for an action that is desired to be executed next
         :return: the best possible city action ready to be build
         """
-        # tmp vars
-        ava_points = self.game.points
 
         if ava_points == 0:
             # Impossible to do anything if current amount of points is 0
@@ -716,7 +901,7 @@ class Human:
                     # Simply search for best city action whereby needed points is adapted
                     # As "Next round, only the points that are not too much plus the default points per round are needed"
                     tmp_points_needed = points_per_round + (ava_points - too_much_points)
-                    return self.get_best_city_action(sorted_action_list, points_needed=tmp_points_needed)
+                    return self.get_best_city_action(sorted_action_list, ava_points, points_needed=tmp_points_needed)
                 else:
                     # If the overflow of points does not happen in this round,
                     # the following executions of the code in the next round will catch the points and spend them
@@ -728,151 +913,36 @@ class Human:
             # if pointer_per_round >= needed_points, spend all ava_points
             return self.select_action_for_points(sorted_action_list, ava_points)
 
-    def plan_global_action(self, global_action, sorted_city_action):
+    def select_action_for_points(self, sorted_action_list, points):
         """
-        'Schedules" to return the desired global action, if enough points available, it will be returned immediately
-        if not either the round will be ended
-        or an action using the points that are not used is played such that next round this action is still possible
-        :param global_action: a global action which is ready to be build
-        :param sorted_city_action: sorted city action list (tuples of action and importance value)
-        :return: action to perform to achieve doing this action now or later
-        """
-        action = global_action
-        # get costs - no need to check other get_costs instances since all global actions have constant costs
-        costs = global_action.get_costs()
-
-        # Check if selected global action is possible
-        if self.game.points < costs:
-            # If not, select an action that makes it possible when just waiting next time
-            action = self.get_best_city_action(sorted_city_action, points_needed=costs)
-            # This works because the select action will see that no points to play exists in the 2nd time triggering
-            # and thus just ends the round
-
-        return action
-
-    def build_action_list(self, sorted_city_action, sorted_global_actions):
-        """
-        Build a list of actions whereby the first one is the most important action to perform in this round
-        :param sorted_city_action: all city specific actions and a rank whereby the highest rank = most important
-        :param sorted_global_actions: all possible global actions
-        :return: List of tuples of actions and values
+        Logic for spending the specified amount of points
+        :param sorted_action_list:
+        :param points:
+        :return:
         """
 
-        # Tmp vars
-        best_action = actions.EndRound()
-        ava_points = self.game.points
+        most_important_action = sorted_action_list[0][0]
 
-        # Round 1 Gameplan - special because guaranteed to have 40 points and early in game
-        if self.game.round == 1:
-            # Follow up action from previous round 1 steps
-            if self.pat_with_med_dev:
-                # Guarantees that if medication was chosen to be first action of this round,
-                # that afterwards the best city action is chosen
-                best_action = self.get_best_city_action(sorted_city_action)
-            elif ava_points < 40:
-                # Guarantees that if previously action was to wait 1 round before developing vaccine
-                # that is actually waits after performing the action
-                best_action = actions.EndRound()
-            else:
-                # First action in first round
-                candidate_cities = []
-                for city in self.game.cities_infected:
-                    compared_pop = h_utils.compute_percentage(self.population_of_biggest_city, city.population)
-                    if city.outbreak.pathogen.duration <= 0.25 and compared_pop < 0.01:
-                        candidate_cities.append(city)
-                if candidate_cities:
-                    # If really small city infected with low duration pathogen, reduce mobility maximal
-                    # sort for Smallest duration first
-                    candidate_cities = sorted(candidate_cities, key=lambda x: x.outbreak.pathogen.duration)
-                    # Most important pat next
-                    city_to_close = sorted(candidate_cities, key=lambda x: h_utils.compute_pathogen_importance(
-                        self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen))[0]
-                    if city_to_close.connections:
-                        # If city has an airport, close it for max rounds
-                        # no need to check if already closes since this would be first action of game
-                        max_round = actions.CloseAirport.get_max_rounds(ava_points)
-                        best_action = actions.CloseAirport(city_to_close, max_round)
-                    else:
-                        # quarantine for max rounds
-                        max_round = actions.PutUnderQuarantine.get_max_rounds(ava_points)
-                        best_action = actions.PutUnderQuarantine(city_to_close, max_round)
-                else:
-                    # Else default logic
-                    if isinstance(sorted_global_actions[0][0], actions.DevelopMedication):
-                        # If medication most important,develop it - follow up: do some action
-                        best_action = sorted_global_actions[0][0]
-                    else:
-                        # if vaccine is most important, do best action and choose what to develop in the following round
-                        # Since global actions are only develop medication or develop vaccine, this else is fine for now
-                        # Follow up: end round (wait)
-                        best_action = self.get_best_city_action(sorted_city_action,
-                                                                points_needed=actions.DevelopVaccine.get_costs())
+        # TODO change 1 recalc
+        # Basic idea
+        if most_important_action.costs <= points or most_important_action.recalculate_costs_for_points(
+                points).costs <= points:
+            # Do most important if possible
+            return most_important_action
 
-            return [best_action]
+        # Recalculate for all actions (only changes the value if it would become possible only due to the adjustment)
+        recalc_actions = [(action.recalculate_costs_for_points(points), importance)
+                          for (action, importance) in sorted_action_list]
+        # Find best possible action in list for points whereby reduce mobility action costs are fitted to ava points
+        possible_actions_for_points = [action for (action, importance) in recalc_actions if action.costs <= points]
 
-        # Round X Gameplan
-        if not sorted_global_actions:
-            # If no global actions anymore, do most important city action
-            best_action = self.get_best_city_action(sorted_city_action)
+        if possible_actions_for_points:
+            # Return most important of these actions
+            return possible_actions_for_points[0]
         else:
-            # Get features needed for decisions below
-            # Tmp var for medi or vac is developing for at least one pathogen
-            tmp_var_developing = False
-            tmp_var_developed = True
-            # Tmp var for medi or vac is developing/developed for at least one pathogen
-            tmp_var_developing_or_developed = True
-            tmp_overall_state_dict = {}
-            tmp_developed_state_dict = {}
-            for pat_name, state_dict in self.game.pat_state_dict.items():
-                developing_state = (state_dict['mDev'] or state_dict['vDev'])
-                developed_state = (state_dict['mAva'] or state_dict['vAva'])
-                overall_state = (developing_state or developed_state)
-                # Save for later
-                tmp_developed_state_dict[pat_name] = developed_state
-                tmp_overall_state_dict[pat_name] = overall_state
-                # Becomes true if at least one is developing
-                tmp_var_developing = tmp_var_developing or developing_state
-                # Stays true if every pas has either medication or vaccine developed
-                tmp_var_developed = tmp_var_developed and developed_state
-                # Stays True if every pat has at least medication or vaccine developing or developed
-                tmp_var_developing_or_developed = tmp_var_developing_or_developed and overall_state
+            # Not enough points for any action
+            return actions.EndRound()
 
-            if tmp_var_developing:
-                # If at least one medication or vaccine is still developing
-                if tmp_var_developing_or_developed:
-                    # and each pathogen has a medication or a vaccine in development or already developed
-                    # Do best city action
-                    best_action = self.get_best_city_action(sorted_city_action)
-                else:
-                    # and not each pathogen has a medication or a vaccine in development or already developed
-                    # Do best global action (i.e. develop a medication or vaccine for a so far not considered pathogen
-                    # Filter out actions for pathogens which are already developing or developed
-                    filtered_global_actions = [tmp_action for (tmp_action, _) in sorted_global_actions
-                                               if not tmp_overall_state_dict[tmp_action.parameters['pathogen']]]
-                    # Resulting list can not be empty since this would result in the previous if being true, further order is preserved
-                    # Thus simply get new most important by taking the first one
-
-                    best_action = self.plan_global_action(filtered_global_actions[0], sorted_city_action)
-            else:
-                # If non is currently developing
-                if not tmp_var_developed:
-                    # and not each pathogen has either medication or vaccine developed
-                    filtered_global_actions = [tmp_action for (tmp_action, _) in sorted_global_actions
-                                               if not tmp_developed_state_dict[tmp_action.parameters['pathogen']]]
-                    best_action = self.plan_global_action(filtered_global_actions[0], sorted_city_action)
-                else:
-                    # and each pathogen has either medication or vaccine developed
-
-                    # TODO test which is better
-                    # [dynamic max] do city action or best global action if last development finished 5 round agao
-                    # no check for none, it is impossible that this gets executed when no development has finished
-                    if self.game.last_development_finished_since >= 5:
-                        # TODO test other settings or flags here (e.g. importance)
-                        best_action = self.plan_global_action(sorted_global_actions[0][0], sorted_city_action)
-                    else:
-                        best_action = self.get_best_city_action(sorted_city_action)
-
-                    # [1 max each]
-                    # best_action = self.get_best_city_action(sorted_city_action)
-
-        return [best_action]
+        # TODO improvements:
+        # if important dif to nachfolger und nachnachfolger less than 5%/10% each
+        # and both would be possible for same or less points do first of them
