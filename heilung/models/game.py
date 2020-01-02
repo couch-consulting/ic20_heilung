@@ -25,13 +25,6 @@ class Game:
         self.error = state.setdefault('error', '')
         self.points_per_round = 20
 
-        # Create a graph of all connections between cities
-        self.connections = nx.Graph()
-        self.connections.add_nodes_from(self.cities.keys())
-        edges = [(from_city, to_city) for from_city, city in self.cities.items()
-                 for to_city in city.connections]
-        self.connections.add_edges_from(edges)
-
         # Feature that shall not be recomputed on every call like properties below
         self.cities_list = [city for _, city in self.cities.items()]
         self.biggest_city = max(self.cities_list, key=lambda x: x.population)

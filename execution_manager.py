@@ -12,9 +12,10 @@ parser.add_argument('--client-path', type=str, help='Path to ic20 client', defau
 parser.add_argument('--seed', type=str, help='A custom seed to replace the randomly generated one',
                     default=str(int(time.time())))
 parser.add_argument('--silent', help='Remove any output of the server', action='store_true')
-parser.add_argument('--test', type=int, help='Starts a test run for the specified number of epochs')
 parser.add_argument('--port', type=str, help='Port for server', default='5000')
 parser.add_argument('--no_obs', help='Disable Observer', action='store_true')
+parser.add_argument('--epochs', type=int, help='Starts a test run for the specified number of epochs', default=1)
+
 args = parser.parse_args()
 
 base_url = 'http://localhost:' + args.port
@@ -25,9 +26,7 @@ if args.silent:
     subprocess_cmd.append('--silent')
 if args.no_obs:
     subprocess_cmd.append('--no_obs')
-iterations = 1
-if args.test:
-    iterations = args.test
+
 
 # Msr time
 start = time.time()
@@ -40,7 +39,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
     won_games = 0
 
     # Loop in case of test
-    for i in range(iterations):
+    for i in range(args.epochs):
         # Play game
         client = subprocess.Popen([args.client_path, '-u', base_url + '/', '-s', args.seed],
                                   stdout=subprocess.DEVNULL)
@@ -58,9 +57,9 @@ with subprocess.Popen(subprocess_cmd) as proc:
         requests.post(base_url + '/seed/' + args.seed)
 
     # Print final results
-    if iterations > 1:
-        avg_rounds = avg_rounds / iterations
-        win_ratio = won_games / iterations
+    if args.epochs > 1:
+        avg_rounds = avg_rounds / args.epochs
+        win_ratio = won_games / args.epochs
         print(f'Win %: {win_ratio} | Avg. Rounds: {avg_rounds}')
 
     # Close
