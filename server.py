@@ -48,7 +48,7 @@ def index():
         print(response.build_action())
 
     # Observer
-    # Observer(game, response, app.config['SEED'])
+    Observer(game, response, app.config['SEED'])
 
     return response.build_action()
 
