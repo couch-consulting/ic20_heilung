@@ -16,7 +16,7 @@ parser.add_argument('--test', type=int, help='Starts a test run for the specifie
 parser.add_argument('--port', type=str, help='Port for server', default='5000')
 args = parser.parse_args()
 
-# Set seed default
+base_url = 'http://localhost:' + args.port
 
 # Parse args
 subprocess_cmd = ['python', 'server.py', '--seed', args.seed, '--port', args.port]
@@ -39,12 +39,12 @@ with subprocess.Popen(subprocess_cmd) as proc:
     # Loop in case of test
     for i in range(iterations):
         # Play game
-        client = subprocess.Popen([args.client_path, '-u', 'http://localhost:' + args.port + '/', '-s', args.seed],
+        client = subprocess.Popen([args.client_path, '-u', base_url + '/', '-s', args.seed],
                                   stdout=subprocess.DEVNULL)
         client.wait()
 
         # Collect result
-        results = requests.get('http://localhost:' + args.port + '/last_state').json()
+        results = requests.get(base_url + '/last_state').json()
         avg_rounds += results['rounds']
         if results['outcome'] == 'win':
             won_games += 1
@@ -52,7 +52,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
 
         # Update Seed for next iteration
         args.seed = str(int(time.time()))
-        requests.post('http://localhost:' + args.port + '/seed/' + args.seed)
+        requests.post(base_url + '/seed/' + args.seed)
 
     # Print final results
     if iterations > 1:
