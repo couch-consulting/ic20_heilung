@@ -14,6 +14,7 @@ parser.add_argument('--seed', type=str, help='A custom seed to replace the rando
 parser.add_argument('--silent', help='Remove any output of the server', action='store_true')
 parser.add_argument('--test', type=int, help='Starts a test run for the specified number of epochs')
 parser.add_argument('--port', type=str, help='Port for server', default='5000')
+parser.add_argument('--no_obs', help='Disable Observer', action='store_true')
 args = parser.parse_args()
 
 base_url = 'http://localhost:' + args.port
@@ -22,6 +23,8 @@ base_url = 'http://localhost:' + args.port
 subprocess_cmd = ['python', 'server.py', '--seed', args.seed, '--port', args.port]
 if args.silent:
     subprocess_cmd.append('--silent')
+if args.no_obs:
+    subprocess_cmd.append('--no_obs')
 iterations = 1
 if args.test:
     iterations = args.test
