@@ -664,7 +664,7 @@ class Human:
                                                             points_needed=actions.DevelopVaccine.get_costs())
 
         # Bio Terrorism game plan
-        elif city_with_bio_terrorism:
+        elif city_with_bio_terrorism and city_with_bio_terrorism in self.game.pathogens_in_cities:
             # Get real number of points to counter bio terrorism attack
             actual_points = saved_points + ava_points
             best_action = self.get_action_for_low_duration_city(city_with_bio_terrorism, actual_points)
@@ -776,10 +776,10 @@ class Human:
 
             tmp_num_rounds = actions.PutUnderQuarantine.get_max_rounds(ava_points)
             tmp_num_rounds_airport = actions.CloseAirport.get_max_rounds(ava_points)
-            if (tmp_num_rounds and city.outbreak.pathogen.mobility >= 0.5) or not city.connections:
+            if tmp_num_rounds and (city.outbreak.pathogen.mobility >= 0.5 or not city.connections):
                 # Put under quarantine possible
                 best_action = actions.PutUnderQuarantine(city, tmp_num_rounds)
-            elif tmp_num_rounds_airport:
+            elif tmp_num_rounds_airport and city.connections:
                 # Close airport possible
                 best_action = actions.CloseAirport(city, tmp_num_rounds_airport)
             else:
