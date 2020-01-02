@@ -58,6 +58,11 @@ def last_state():
     return last_state_dic
 
 
+@app.route('/seed/<seed_id>', methods=['POST'])
+def seed_update(seed_id):
+    app.config['SEED'] = seed_id
+    return {}
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Server')
     parser.add_argument('--seed', type=str, help='A custom seed to know for observation purposes', default='unknown')

@@ -46,10 +46,11 @@ with subprocess.Popen(subprocess_cmd) as proc:
         avg_rounds += results['rounds']
         if results['outcome'] == 'win':
             won_games += 1
-        print(f'Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
+        print(f'Iter#: {i} | Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
 
-        # Random Seed for next iteration
+        # Update Seed for next iteration
         args.seed = str(int(time.time()))
+        requests.post('http://localhost:5000/seed/' + args.seed)
 
     # Print final results
     if iterations > 1:
