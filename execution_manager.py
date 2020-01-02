@@ -50,7 +50,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
         avg_rounds += results['rounds']
         if results['outcome'] == 'win':
             won_games += 1
-        print(f'Iter#: {i} | Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
+        print(f'Epoch: {i} | Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
 
         # Update Seed for next iteration
         args.seed = str(int(time.time()))
@@ -60,7 +60,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
     if args.epochs > 1:
         avg_rounds = avg_rounds / args.epochs
         win_ratio = won_games / args.epochs
-        print(f'Win %: {win_ratio} | Avg. Rounds: {avg_rounds}')
+        print(f'Win %: {win_ratio} | Avg. Rounds: {avg_rounds} | Epochs: {args.epochs}')
 
     # Close
     proc.terminate()
