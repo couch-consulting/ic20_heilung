@@ -59,7 +59,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
 
     # Print final results
     if args.epochs > 1:
-        avg_rounds = avg_rounds / args.epochs
+        avg_rounds = avg_rounds / (args.epochs - won_games)
         win_ratio = won_games / args.epochs
         print(f'Win %: {win_ratio} | Avg. Loss Rounds: {avg_rounds} | Epochs: {args.epochs}')
 
