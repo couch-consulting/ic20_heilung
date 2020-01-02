@@ -664,7 +664,7 @@ class Human:
                                                             points_needed=actions.DevelopVaccine.get_costs())
 
         # Bio Terrorism game plan
-        elif city_with_bio_terrorism and city_with_bio_terrorism in self.game.pathogens_in_cities:
+        elif city_with_bio_terrorism:
             # Get real number of points to counter bio terrorism attack
             actual_points = saved_points + ava_points
             best_action = self.get_action_for_low_duration_city(city_with_bio_terrorism, actual_points)

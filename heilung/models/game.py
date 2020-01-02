@@ -150,9 +150,10 @@ class Game:
         for city in self.cities.values():
             if city.has_event(events.BioTerrorism):
                 for event in city.events:
-                    if event.type == 'bioTerrorism' and event.sinceRound == self.round and \
-                            not self.pat_state_dict[event.pathogen.name]['any_action'] and not (
-                            city.under_quarantine or city.airport_closed):
+                    if event.type == 'bioTerrorism' and event.sinceRound == self.round \
+                            and event.pathogen in self.pathogens_in_cities \
+                            and not self.pat_state_dict[event.pathogen.name]['any_action'] \
+                            and not (city.under_quarantine or city.airport_closed):
                         return city
         return None
 
