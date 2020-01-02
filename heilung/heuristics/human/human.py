@@ -462,6 +462,7 @@ class Human:
             pat_scale.decrease_on_dependency('infectivity', int(med_dep) * pat_scale.influence_lvl2)
 
         # Return pathogen
+        pat_scale.rescale()
         return Pathogen(pathogen.name, pat_scale.sg['infectivity'], pat_scale.sg['mobility'],
                         pat_scale.sg['duration'], pat_scale.sg['lethality'], transformation=False)
 
@@ -489,13 +490,15 @@ class Human:
             # Influences
             pat_scale.increase_on_dependency('infectivity', infected_citz * pat_scale.influence_lvl3)
             pat_scale.increase_on_dependency('lethality', infected_citz * pat_scale.influence_lvl3)
+
             pat_scale.decrease_on_dependency('infectivity', immune_citz * pat_scale.influence_lvl3)
-            pat_scale.increase_on_dependency('mobility', pathogen.infectivity * pat_scale.influence_lvl3)
+            pat_scale.increase_on_dependency('mobility', pathogen.infectivity * pat_scale.influence_lvl2)
             # Infectivity is more important the longer the duration
             pat_scale.increase_on_dependency('infectivity', pathogen.duration * pat_scale.influence_lvl3)
             # The shorter the duration the more important is lethality, since duration currently has 100% := long, inverted is needed
             pat_scale.increase_on_dependency('lethality', pathogen.duration * pat_scale.influence_lvl3, inverted=True)
 
+            pat_scale.rescale()
             tmp_dict[pathogen.name] = Pathogen(pathogen.name, pat_scale.sg['infectivity'], pat_scale.sg['mobility'],
                                                pat_scale.sg['duration'], pat_scale.sg['lethality'],
                                                transformation=False)
@@ -675,7 +678,8 @@ class Human:
         else:
             isolated_cities = []
             for pathogen in self.game.pathogens_in_cities:
-                if len(self.game.get_cities_with_pathogen(pathogen)) == 1:
+                # only cities with mob higher 0 are important because mob 0 pats are and will be isolated for ever
+                if len(self.game.get_cities_with_pathogen(pathogen)) == 1 and pathogen.mobility > 0:
                     # Get new infected or isolated city
                     tmp_city = self.game.get_cities_with_pathogen(pathogen)[0]
                     isolated_cities.append(tmp_city)
@@ -724,10 +728,10 @@ class Human:
         :return:
         """
         # sort for biggest city first
-        candidate_cities = sorted(candidate_cities, key=lambda x: x.population, reverse=True)
+        candidate_cities.sort(key=lambda x: x.population, reverse=True)
         # Sort for most important pathogen
         city = sorted(candidate_cities, key=lambda x: h_utils.compute_pathogen_importance(
-            self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen))[0]
+            self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen), reverse=True)[0]
 
         return self.get_action_for_low_duration_city(city, points_to_spend)
 
@@ -769,23 +773,8 @@ class Human:
         still_isolated = [city for city in isolated_cities if city.under_quarantine or city.airport_closed]
         no_isolation_present = [city for city in isolated_cities if city not in still_isolated]
 
-        if no_isolation_present:
-            # Sort for most important pathogen
-            city = sorted(no_isolation_present, key=lambda x: h_utils.compute_pathogen_importance(
-                self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen))[0]
-
-            tmp_num_rounds = actions.PutUnderQuarantine.get_max_rounds(ava_points)
-            tmp_num_rounds_airport = actions.CloseAirport.get_max_rounds(ava_points)
-            if tmp_num_rounds and (city.outbreak.pathogen.mobility >= 0.5 or not city.connections):
-                # Put under quarantine possible
-                best_action = actions.PutUnderQuarantine(city, tmp_num_rounds)
-            elif tmp_num_rounds_airport and city.connections:
-                # Close airport possible
-                best_action = actions.CloseAirport(city, tmp_num_rounds_airport)
-            else:
-                best_action = self.get_best_city_action(sorted_city_action, ava_points)
-        else:
-            # all isolated cities are still isolated
+        if still_isolated:
+            # all isolated cities are still isolated - hence get points to keep them isolated next round
             points_needed_in_future = actions.CloseAirport.get_costs(5)
             for city in still_isolated:
                 if city.under_quarantine:
@@ -799,6 +788,22 @@ class Human:
             else:
                 # need more points, hence wait for them
                 best_action = actions.EndRound()
+        else:
+            # Sort for most important pathogen
+            city = sorted(no_isolation_present, key=lambda x: h_utils.compute_pathogen_importance(
+                self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen), reverse=True)[0]
+
+            tmp_num_rounds = actions.PutUnderQuarantine.get_max_rounds(ava_points)
+            tmp_num_rounds_airport = actions.CloseAirport.get_max_rounds(ava_points)
+            if tmp_num_rounds and (city.outbreak.pathogen.mobility >= 0.5 or not city.connections):
+                # Put under quarantine possible
+                best_action = actions.PutUnderQuarantine(city, tmp_num_rounds)
+            elif tmp_num_rounds_airport and city.connections:
+                # Close airport possible
+                best_action = actions.CloseAirport(city, tmp_num_rounds_airport)
+            else:
+                best_action = self.get_best_city_action(sorted_city_action, ava_points)
+
 
         return best_action
 
