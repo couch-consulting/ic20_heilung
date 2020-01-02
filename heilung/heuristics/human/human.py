@@ -700,6 +700,7 @@ class Human:
         or an action using the points that are not used is played such that next round this action is still possible
         :param global_action: a global action which is ready to be build
         :param sorted_city_action: sorted city action list (tuples of action and importance value)
+        :param ava_points: point allowed to use
         :return: action to perform to achieve doing this action now or later
         """
         action = global_action
@@ -866,6 +867,7 @@ class Human:
         and optionally consider how much point shall be available in the future
         :param sorted_action_list: sorted action list (tuples of action and importance value)
         :param points_needed: points needed for an action that is desired to be executed next
+        :param ava_points: point allowed to use
         :return: the best possible city action ready to be build
         """
 

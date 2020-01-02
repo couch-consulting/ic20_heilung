@@ -97,9 +97,9 @@ class City:
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
-    def has_event(self, action_object):
+    def has_event(self, event_object):
         for event in self.events:
-            if isinstance(event, action_object):
+            if isinstance(event, event_object):
                 return True
         return False
 

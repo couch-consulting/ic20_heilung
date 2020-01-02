@@ -26,6 +26,8 @@ iterations = 1
 if args.test:
     iterations = args.test
 
+# Msr time
+start = time.time()
 # Start execution
 with subprocess.Popen(subprocess_cmd) as proc:
     time.sleep(2)
@@ -60,3 +62,6 @@ with subprocess.Popen(subprocess_cmd) as proc:
 
     # Close
     proc.terminate()
+
+end = time.time()
+print(f'Overall time: {end - start}')

@@ -28,7 +28,8 @@ def index():
         # Save Results
         global last_state_dic
         last_state_dic['outcome'] = game.outcome
-        last_state_dic['rounds'] = game.round
+        # - 1 since only the round up to this current round were survived
+        last_state_dic['rounds'] = game.round - 1
 
     # Heuristics
     # Human heuristic response
@@ -47,11 +48,12 @@ def index():
         print(response.build_action())
 
     # Observer
-    obs = Observer(game, response, app.config['SEED'])
+    Observer(game, response, app.config['SEED'])
 
     return response.build_action()
 
 
+# Routes for testing
 @app.route('/last_state', methods=['GET'])
 def last_state():
     global last_state_dic
