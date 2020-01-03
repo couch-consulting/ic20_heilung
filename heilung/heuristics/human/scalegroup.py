@@ -1,4 +1,5 @@
 # Global vars
+from . import h_utils
 
 
 class Scalegroup:
@@ -111,3 +112,50 @@ class Scalegroup:
 
         for key, value in self.sg.items():
             self.sg[key] = self.MAX_PER_CONST / max_val * value
+
+
+def init_city_sg(cities_list, city_weighted_pathogens):
+    """
+    Initializes the scalegroup for the ranking of cities
+    :param cities_list: list of city objects
+    :param city_weighted_pathogens: dict of city name as key and city specif weighted pathogen as value
+    :return:
+    """
+    # Higher value for numerical robustness
+    default_value = 100000000000000
+    tmp_scale_group = {}
+    # Build scale group
+    for city in cities_list:
+        # Default initialize all cities with rank equal to 100% or 100% + % of pathogen
+        if city.outbreak:
+            pathogen_importance = h_utils.compute_pathogen_importance(city_weighted_pathogens[city.name],
+                                                                      city.outbreak.pathogen)
+            tmp_scale_group[city.name] = default_value + (default_value * pathogen_importance)
+        else:
+            tmp_scale_group[city.name] = default_value
+
+    return Scalegroup(tmp_scale_group)
+
+
+def init_global_action_sg(weighted_pathogens, relevant_pathogens_dict):
+    """
+    Initializes the scalegroup for the ranking of global actions
+    :param weighted_pathogens: dict of weighted pathogens
+    :param relevant_pathogens_dict: dict of original pathogens
+    :return:
+    """
+    global_action_scale = Scalegroup({})
+    # math robustness offset
+    val = 100
+    for pathogen_name, weighted_pathogen in weighted_pathogens.items():
+        importance = h_utils.compute_pathogen_importance(weighted_pathogen,
+                                                         relevant_pathogens_dict[pathogen_name]) * val
+        # Store annotated in scale group
+        global_action_scale.sg[pathogen_name + '_dV'] = importance
+        global_action_scale.sg[pathogen_name + '_dM'] = importance
+
+        # Apply bias
+        global_action_scale.apply_bias(pathogen_name + '_dV', 1)
+        global_action_scale.apply_bias(pathogen_name + '_dM', 0.8)
+
+    return global_action_scale

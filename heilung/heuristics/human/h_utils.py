@@ -1,6 +1,4 @@
 # Utils for human heuristic - all operation that change the rank outsourced such that it can be replaced more easily
-# Rank equals to a percentage which identifies how important a certain object/feature is (the higher the more important)
-import math
 from heilung.models import events
 from heilung.models import actions
 
@@ -74,3 +72,17 @@ def compute_combined_importance(city_ranks, ranked_city_actions_per_city):
         result.sort(key=lambda x: x[1], reverse=True)
     return result
 
+
+def since_round_percentage(current_round, city, inverted=True):
+    """
+    Computes a percentage equal to how old or new a round is
+    :param current_round: current round of the game
+    :param city: city object
+    :param inverted: if true, 100% equals old, if false 100% equal new
+    :return: percentage of how old or new a round is
+    """
+    # Put sinceRound into contrast of overall rounds and give a value that indicates how long this outbreak exits
+    if current_round >= 6:  # this feature is only useful when some rounds already passed
+        return compute_percentage(current_round, city.outbreak.sinceRound, inverted=inverted)
+    else:
+        return 0
