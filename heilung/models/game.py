@@ -62,7 +62,8 @@ class Game:
                         self.pathogens__with_developing_medication + self.pathogens__with_developing_vaccine
                         + self.pathogens_with_medication + self.pathogens_with_vaccine),
                 'prevalence': self._get_percentage_of_infected(pat),
-                'immunity': self._get_percentage_of_immune(pat)
+                'immunity': self._get_percentage_of_immune(pat),
+                'pathogen': pat,
             } for pat in self.pathogens_in_cities
         }
 
