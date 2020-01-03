@@ -35,7 +35,8 @@ with subprocess.Popen(subprocess_cmd) as proc:
     time.sleep(2)
 
     # Tmp vars
-    avg_rounds = 0
+    avg_rounds_loss = 0
+    avg_rounds_win = 0
     won_games = 0
 
     # Loop in case of test
@@ -49,8 +50,9 @@ with subprocess.Popen(subprocess_cmd) as proc:
         results = requests.get(base_url + '/last_state').json()
         if results['outcome'] == 'win':
             won_games += 1
+            avg_rounds_win += 1
         else:
-            avg_rounds += results['rounds']
+            avg_rounds_loss += results['rounds']
         print(f'Epoch: {i} | Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
 
         # Update Seed for next iteration
@@ -59,9 +61,11 @@ with subprocess.Popen(subprocess_cmd) as proc:
 
     # Print final results
     if args.epochs > 1:
-        avg_rounds = avg_rounds / (args.epochs - won_games)
+        avg_rounds_loss = avg_rounds_loss / (args.epochs - won_games)
+        avg_rounds_win = avg_rounds_win / won_games
         win_ratio = won_games / args.epochs
-        print(f'Win %: {win_ratio} | Avg. Loss Rounds: {avg_rounds} | Epochs: {args.epochs}')
+        print(
+            f'Win %: {win_ratio}| Avg. Won Rounds: {avg_rounds_win} | Avg. Loss Rounds: {avg_rounds_loss} | Epochs: {args.epochs}')
 
     # Close
     proc.terminate()

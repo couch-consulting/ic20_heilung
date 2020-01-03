@@ -5,7 +5,7 @@ from flask import Flask, abort, g, request
 
 from heilung.builders.action import ActionBuilder
 from heilung.cli_game.observer import Observer
-from heilung.heuristics.human.human import Human
+from heilung.heuristics.human import human
 from heilung.models import Game
 
 app = Flask(__name__)
@@ -33,8 +33,7 @@ def index():
 
     # Heuristics
     # Human heuristic response
-    human = Human(game)
-    response = human.get_decision()[0]  # 0 := most important
+    response = human.get_decision(game)[0]  # 0 := most important
 
     # # Example for random iterations
     # action_builder = ActionBuilder(game)
@@ -67,6 +66,7 @@ def last_state():
 def seed_update(seed_id):
     app.config['SEED'] = seed_id
     return {}
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Server')
