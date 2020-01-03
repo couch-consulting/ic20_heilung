@@ -50,7 +50,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
         results = requests.get(base_url + '/last_state').json()
         if results['outcome'] == 'win':
             won_games += 1
-            avg_rounds_win += 1
+            avg_rounds_win += results['rounds']
         else:
             avg_rounds_loss += results['rounds']
         print(f'Epoch: {i} | Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
