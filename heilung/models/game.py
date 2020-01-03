@@ -337,7 +337,7 @@ class Game:
         """
         candidate_cities = []
         for pathogen in self.pathogens_in_cities:
-            if pathogen.duration <= 0.25 and pathogen.mobility > 0:
+            if pathogen.duration <= 0.5 and pathogen.mobility > 0:
                 for city in self.get_cities_with_pathogen(pathogen):
                     if not (city.airport_closed or city.under_quarantine):
                         candidate_cities.append(city)

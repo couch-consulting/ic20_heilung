@@ -45,6 +45,8 @@ def index():
     if not app.config['SILENT']:
         # Temporary to monitor round change
         print(game.state_recap(short=True))
+        if 'city' in response.parameters and game.cities[response.parameters['city']].outbreak:
+            print('Action for Pathogen: ' + str(game.cities[response.parameters['city']].outbreak.pathogen.name))
         print(response.build_action())
 
     # Observer

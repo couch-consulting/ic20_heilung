@@ -10,11 +10,11 @@ biasMAP = {
     # Bias based upon idea how much more important one action is than another
     # not based upon the game state but based upon the game plan
     actions.DeployVaccine: 1,
-    actions.DeployMedication: 0.95,
+    actions.DeployMedication: 0.75,
 
-    actions.PutUnderQuarantine: 0.85,
-    actions.CloseAirport: 0.75,
-    actions.CloseConnection: 0.7,
+    actions.PutUnderQuarantine: 0.7,
+    actions.CloseAirport: 0.65,
+    actions.CloseConnection: 0.6,
 
     actions.CallElections: 0.5,
     actions.ApplyHygienicMeasures: 0.5,

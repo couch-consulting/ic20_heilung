@@ -490,9 +490,9 @@ class Human:
             # Influences
             pat_scale.increase_on_dependency('infectivity', infected_citz * pat_scale.influence_lvl3)
             pat_scale.increase_on_dependency('lethality', infected_citz * pat_scale.influence_lvl3)
+            pat_scale.decrease_on_dependency('infectivity', immune_citz * pat_scale.influence_lvl2)
 
-            pat_scale.decrease_on_dependency('infectivity', immune_citz * pat_scale.influence_lvl3)
-            pat_scale.increase_on_dependency('mobility', pathogen.infectivity * pat_scale.influence_lvl2)
+            pat_scale.increase_on_dependency('mobility', pathogen.infectivity * pat_scale.influence_lvl3)
             # Infectivity is more important the longer the duration
             pat_scale.increase_on_dependency('infectivity', pathogen.duration * pat_scale.influence_lvl3)
             # The shorter the duration the more important is lethality, since duration currently has 100% := long, inverted is needed
@@ -619,12 +619,11 @@ class Human:
         """
 
         # Tmp vars
-        city_with_bio_terrorism = self.game.has_new_bioTerrorism
         ava_points = self.game.points
         saved_points = 0
 
         # Build up fall back points for bio terrorism
-        if self.game.round >= 10:
+        if self.game.round > 1:
             ava_points -= 20
             saved_points = 20
 
@@ -638,7 +637,6 @@ class Human:
                 # that afterwards the best city action is chosen
                 best_action = self.get_best_city_action(sorted_city_action, ava_points)
             elif ava_points < 40:
-
                 # Follow up logic for candidate city action
                 candidate_cities = self.game.duration_candidate_cities
                 if candidate_cities:
@@ -666,29 +664,24 @@ class Human:
                     best_action = self.get_best_city_action(sorted_city_action, ava_points,
                                                             points_needed=actions.DevelopVaccine.get_costs())
 
-        # Bio Terrorism game plan
-        elif city_with_bio_terrorism:
-            # Get real number of points to counter bio terrorism attack
-            actual_points = saved_points + ava_points
-            best_action = self.get_action_for_low_duration_city(city_with_bio_terrorism, actual_points)
-            if not best_action:
-                best_action = self.get_best_city_action(sorted_city_action, actual_points)
-
         # Round X Gameplan
         else:
-            isolated_cities = []
-            for pathogen in self.game.pathogens_in_cities:
-                # only cities with mob higher 0 are important because mob 0 pats are and will be isolated for ever
-                if len(self.game.get_cities_with_pathogen(pathogen)) == 1 and pathogen.mobility > 0:
-                    # Get new infected or isolated city
-                    tmp_city = self.game.get_cities_with_pathogen(pathogen)[0]
-                    isolated_cities.append(tmp_city)
+            city_with_bio_terrorism = self.game.has_new_bioTerrorism
+            isolated_cities = self.get_isolated_cities()
 
+            # Isolated Gameplan (Make pathogens die out)
             if isolated_cities:
                 # Get real number of points to avoid having not isolated cities
                 actual_points = saved_points + ava_points
                 best_action = self.get_action_for_isolated_cities(isolated_cities, actual_points, sorted_city_action)
+            # Bio Terrorism game plan (counter bio terrorism of completely new pathogens
+            elif city_with_bio_terrorism and city_with_bio_terrorism not in isolated_cities:
+                # Get real number of points to counter bio terrorism attack
+                actual_points = saved_points + ava_points
+                best_action = self.get_action_for_low_duration_city(city_with_bio_terrorism, actual_points)
 
+                if not best_action:
+                    best_action = self.get_best_city_action(sorted_city_action, actual_points)
             elif not sorted_global_actions:
                 # If no global actions anymore, do most important city action
                 best_action = self.get_best_city_action(sorted_city_action, ava_points)
@@ -720,6 +713,20 @@ class Human:
 
         return action
 
+    def get_isolated_cities(self):
+        """
+        Get cities in which the only the outbreak of one pathogen is present
+        :return:
+        """
+        isolated_cities = []
+        for pathogen in self.game.pathogens_in_cities:
+            # only cities with mob higher 0 are important because mob 0 pats are and will be isolated for ever
+            if len(self.game.get_cities_with_pathogen(pathogen)) == 1 and pathogen.mobility > 0:
+                # Get new infected or isolated city
+                tmp_city = self.game.get_cities_with_pathogen(pathogen)[0]
+                isolated_cities.append(tmp_city)
+        return isolated_cities
+
     def get_action_for_candidate_cities(self, candidate_cities, points_to_spend):
         """
         Return the best action for cities infected with a low duration pathogen
@@ -744,30 +751,15 @@ class Human:
             return None
 
         # No need to check if already closed/under quarantine since first round)
-        if city.outbreak.pathogen.infectivity > 0.25:
-            # If high infectivity or no airport put under quarantin
-            if city.outbreak.pathogen.mobility >= 0.5 or not city.connections:
-                if max_rounds_for_points:
-                    return actions.PutUnderQuarantine(city, max_rounds_for_points)
 
-                if not city.connections:
-                    return None
+        if max_rounds_for_points:
+            return actions.PutUnderQuarantine(city, max_rounds_for_points)
 
-                return actions.CloseAirport(city, max_rounds_for_points_airport)
-
-            return actions.CloseAirport(city, max_rounds_for_points_airport)
-
-        # else just try to close airport
         if not city.connections:
-            # No airport
-            if max_rounds_for_points:
-                # try quarantine for 1 round
-                return actions.PutUnderQuarantine(city, 1)
-
-            # nothing possible
             return None
 
-        return actions.CloseAirport(city, 1)
+        return actions.CloseAirport(city, max_rounds_for_points_airport)
+
 
     def get_action_for_isolated_cities(self, isolated_cities, ava_points, sorted_city_action):
         still_isolated = [city for city in isolated_cities if city.under_quarantine or city.airport_closed]
