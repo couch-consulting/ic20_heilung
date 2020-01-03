@@ -330,19 +330,6 @@ class Game:
             return finished_since
         return None
 
-    @property
-    def duration_candidate_cities(self) -> List[City]:
-        """
-        Returns a list of cities which have a small duration and either very small population or high population
-        """
-        candidate_cities = []
-        for pathogen in self.pathogens_in_cities:
-            if pathogen.duration <= 0.5 and pathogen.mobility > 0:
-                for city in self.get_cities_with_pathogen(pathogen):
-                    if not (city.airport_closed or city.under_quarantine):
-                        candidate_cities.append(city)
-        return candidate_cities
-
     # currently not used but could be useful later
     @property
     def pathogens_without_vaccine(self) -> List[Pathogen]:

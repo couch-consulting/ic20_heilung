@@ -265,9 +265,9 @@ class Human:
 
                 # If anti vacs in city, more important
                 action_scale.increase_on_dependency('deploy_medication', int(anti_vac) * action_scale.influence_lvl1)
-                # For each time medication was already deployed, reduce importance
+                # For each time medication was already deployed, reduce importance (hard cap 5 times in one city)
                 action_scale.decrease_on_dependency('deploy_medication',
-                                                    len(city.deployed_medication) * action_scale.influence_lvl3)
+                                                    len(city.deployed_medication) / 5 * action_scale.influence_lvl3)
             else:
                 # In case the medication is not yet developed
                 action_scale.sg['deploy_medication'] = 0
@@ -461,8 +461,8 @@ class Human:
             pat_scale.decrease_on_dependency('infectivity', city_hyg * pat_scale.influence_lvl2)
             pat_scale.decrease_on_dependency('infectivity', int(med_dep) * pat_scale.influence_lvl2)
 
-        # Return pathogen
         pat_scale.rescale()
+        # Return pathogen
         return Pathogen(pathogen.name, pat_scale.sg['infectivity'], pat_scale.sg['mobility'],
                         pat_scale.sg['duration'], pat_scale.sg['lethality'], transformation=False)
 
@@ -480,13 +480,12 @@ class Human:
 
             # Apply base bias (lethality stays the same)
             pat_scale.apply_bias('infectivity', 0.9)
-            pat_scale.apply_bias('mobility', 0.7)
-            pat_scale.apply_bias('duration', 0.6)
+            pat_scale.apply_bias('duration', 0.8)
+            pat_scale.apply_bias('mobility', 0.6)
 
             # Collect Game Feature
             infected_citz = self.game.get_percentage_of_infected(pathogen)
             immune_citz = self.game.get_percentage_of_immune(pathogen)
-
             # Influences
             pat_scale.increase_on_dependency('infectivity', infected_citz * pat_scale.influence_lvl3)
             pat_scale.increase_on_dependency('lethality', infected_citz * pat_scale.influence_lvl3)
@@ -496,7 +495,7 @@ class Human:
             # Infectivity is more important the longer the duration
             pat_scale.increase_on_dependency('infectivity', pathogen.duration * pat_scale.influence_lvl3)
             # The shorter the duration the more important is lethality, since duration currently has 100% := long, inverted is needed
-            pat_scale.increase_on_dependency('lethality', pathogen.duration * pat_scale.influence_lvl3, inverted=True)
+            pat_scale.increase_on_dependency('lethality', (1 - pathogen.duration) * pat_scale.influence_lvl3)
 
             pat_scale.rescale()
             tmp_dict[pathogen.name] = Pathogen(pathogen.name, pat_scale.sg['infectivity'], pat_scale.sg['mobility'],
@@ -638,7 +637,7 @@ class Human:
                 best_action = self.get_best_city_action(sorted_city_action, ava_points)
             elif ava_points < 40:
                 # Follow up logic for candidate city action
-                candidate_cities = self.game.duration_candidate_cities
+                candidate_cities = self.get_duration_candidate_cities()
                 if candidate_cities:
                     best_action = self.get_action_for_candidate_cities(candidate_cities, ava_points)
                     if not best_action:
@@ -650,7 +649,7 @@ class Human:
             else:
                 # Else First action in first round
                 # Get all cities in which the mobility must be reduced
-                candidate_cities = self.game.duration_candidate_cities
+                candidate_cities = self.get_duration_candidate_cities()
                 if candidate_cities:
                     best_action = self.get_action_for_candidate_cities(candidate_cities, ava_points)
                 elif isinstance(sorted_global_actions[0][0], actions.DevelopMedication):
@@ -740,6 +739,11 @@ class Human:
         city = sorted(candidate_cities, key=lambda x: h_utils.compute_pathogen_importance(
             self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen), reverse=True)[0]
 
+        # pat_overview = [(city.outbreak.pathogen.name, h_utils.compute_pathogen_importance(
+        #     self.weighted_pathogens[city.outbreak.pathogen.name], city.outbreak.pathogen)) for city in candidate_cities]
+        #
+        # print(pat_overview)
+
         return self.get_action_for_low_duration_city(city, points_to_spend)
 
     def get_action_for_low_duration_city(self, city, points_to_spend):
@@ -759,6 +763,18 @@ class Human:
             return None
 
         return actions.CloseAirport(city, max_rounds_for_points_airport)
+
+    def get_duration_candidate_cities(self):
+        """
+        Returns a list of cities which have a small duration and either very small population or high population
+        """
+        candidate_cities = []
+        for pathogen in self.game.pathogens_in_cities:
+            if pathogen.mobility > 0:
+                for city in self.game.get_cities_with_pathogen(pathogen):
+                    if not (city.airport_closed or city.under_quarantine):
+                        candidate_cities.append(city)
+        return candidate_cities
 
 
     def get_action_for_isolated_cities(self, isolated_cities, ava_points, sorted_city_action):
@@ -823,6 +839,7 @@ class Human:
             tmp_var_developing_or_developed = tmp_var_developing_or_developed and overall_state
 
         if tmp_var_developing:
+
             # If at least one medication or vaccine is still developing
             if tmp_var_developing_or_developed:
                 # and each pathogen has a medication or a vaccine in development or already developed
@@ -921,7 +938,7 @@ class Human:
         """
 
         most_important_action = sorted_action_list[0][0]
-
+        print(most_important_action.type)
         # TODO change 1 recalc
         # Basic idea
         if most_important_action.costs <= points or most_important_action.recalculate_costs_for_points(
