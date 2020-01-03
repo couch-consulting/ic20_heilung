@@ -140,7 +140,8 @@ class Game:
         return [(city, city.events) for city in self.cities.values() if len(city.events) > 0]
 
     @property
-    def has_new_bioTerrorism(self) -> City or None:
+    def has_new_bioTerrorism(self) -> List[City]:
+        cities_with_bio_terror = []
         for city in self.cities.values():
             if city.has_event(events.BioTerrorism):
                 for event in city.events:
@@ -148,8 +149,8 @@ class Game:
                             and event.pathogen in self.pathogens_in_cities \
                             and not self.pat_state_dict[event.pathogen.name]['any_action'] \
                             and not (city.under_quarantine or city.airport_closed):
-                        return city
-        return None
+                        cities_with_bio_terror.append(city)
+        return cities_with_bio_terror
 
     @property
     def total_population(self) -> int:

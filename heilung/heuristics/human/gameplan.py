@@ -14,13 +14,25 @@ class Gameplan:
         self.sorted_global_actions = sorted_global_actions
         self.weighted_pathogens = weighted_pathogens
 
+        self.max_list_len = 10
+
     def build_action_list(self):
         """
         Build a list of actions whereby the first one is the most important action to perform in this round
+        List may vary depending on the gameplan
+            - sometimes only 1 action is suggested due to the game state and gameplan
         :return: List of tuples of actions and an importance value
         """
 
-        action_list = [self.get_best_action()]
+        result = self.get_best_action()
+        if not isinstance(result, list):
+            result = [(result, 1)]
+        else:
+            # Resacle
+            max_rank = max(map(lambda x: x[1], result))
+            result = list(map(lambda x: (x[0], x[1] / max_rank), result))
+
+        action_list = result
 
         return action_list
 
@@ -53,7 +65,7 @@ class Gameplan:
         """
         Get best action in round 1
         :param ava_points: points to spend in this round
-        :return: Action object
+        :return: Action object or list of action objects depending on the gameplan situation
         """
         # Follow up action from previous round 1 steps
         if self.game.pathogens_with_medication:
@@ -95,10 +107,10 @@ class Gameplan:
         Get best action any round greater 1
         :param ava_points: points to spend in this round
         :param saved_points: Fall back points which can be spend
-        :return: Action object
+        :return: Action object or list of action objects depending on the gameplan situation
         """
-        city_with_bio_terrorism = self.game.has_new_bioTerrorism
         isolated_cities = self.get_isolated_cities()
+        cities_with_bio_terrorism = [city for city in self.game.has_new_bioTerrorism if city not in isolated_cities]
 
         # Isolated Gameplan (Make pathogens die out)
         if isolated_cities:
@@ -107,13 +119,8 @@ class Gameplan:
             return self.get_action_for_isolated_cities(isolated_cities, actual_points)
 
         # Bio Terrorism game plan (counter bio terrorism of completely new pathogens
-        if city_with_bio_terrorism and city_with_bio_terrorism not in isolated_cities:
-            # Get real number of points to counter bio terrorism attack
-            actual_points = saved_points + ava_points
-            best_action = self.get_action_for_low_duration_city(city_with_bio_terrorism, actual_points)
-            if not best_action:
-                best_action = self.get_best_city_action(actual_points)
-            return best_action
+        if cities_with_bio_terrorism:
+            return self.get_actions_for_bio_terrorism(cities_with_bio_terrorism, ava_points, saved_points)
 
         if not self.sorted_global_actions:
             # If no global actions anymore, do most important city action
@@ -134,7 +141,7 @@ class Gameplan:
         if ava_points == 0:
             # Impossible to do anything if current amount of points is 0
             # However, currently, this should never become relevant since this case is considered earlier
-            return actions.EndRound()
+            return [(actions.EndRound(), 1)]
 
         # Check if desired action for next round exists
         if points_needed == 0:
@@ -151,7 +158,7 @@ class Gameplan:
 
             elif points_per_round + ava_points == points_needed:
                 # if pointer per round + ava = needed points, end round
-                return actions.EndRound()
+                return [(actions.EndRound(), 1)]
 
             elif points_per_round + ava_points < points_needed:
                 # if pointer per round + ava < needed_points, check additional_num rounds
@@ -171,7 +178,7 @@ class Gameplan:
                 # the following executions of the code in the next round will catch the points and spend them
                 # Hence we can just end the round here
                 # same case as if we have to wait the num of round and are not allowed to spend any of it
-                return actions.EndRound()
+                return [(actions.EndRound(), 1)]
 
         # if pointer_per_round >= needed_points, spend all ava_points
         return self.select_action_for_points(ava_points)
@@ -180,44 +187,60 @@ class Gameplan:
         """
         Logic for spending the specified amount of points
         :param points: points to spend
-        :return: best possible action for the specified number of points
+        :return: list of best possible actions for the specified number of points
         """
 
-        most_important_action = self.sorted_city_action[0][0]
+        result_list = []
+        for _ in range(self.max_list_len):
+            most_important_action = self.sorted_city_action[0][0]
+            most_important_action_rank = self.sorted_city_action[0][1]
 
-        # Basic idea
-        if most_important_action.costs <= points or most_important_action.recalculate_costs_for_points(
-                points).costs <= points:
-            # Do most important if possible
-            return most_important_action
+            # Basic idea
+            if most_important_action.costs <= points or most_important_action.recalculate_costs_for_points(
+                    points).costs <= points:
+                # Do most important if possible
+                result_list.append((most_important_action, most_important_action_rank))
+            else:
+                # Recalculate for actions (only changes the value if it would become due to the adjustment)
+                recalc_actions = [(action.recalculate_costs_for_points(points), importance)
+                                  for (action, importance) in self.sorted_city_action]
+                # Find best possible action in list for points whereby reduce mobility action costs are fitted
+                possible_actions_for_points = [(action, importance) for (action, importance) in recalc_actions
+                                               if action.costs <= points]
 
-        # Recalculate for all actions (only changes the value if it would become possible only due to the adjustment)
-        recalc_actions = [(action.recalculate_costs_for_points(points), importance)
-                          for (action, importance) in self.sorted_city_action]
-        # Find best possible action in list for points whereby reduce mobility action costs are fitted to ava points
-        possible_actions_for_points = [action for (action, importance) in recalc_actions if action.costs <= points]
+                if possible_actions_for_points:
+                    # Return most important of these actions
+                    result_list.append((possible_actions_for_points[0][0], possible_actions_for_points[0][1]))
+                else:
+                    # Not enough points for any action
+                    rank = 1
+                    if result_list:
+                        rank = result_list[-1][1] * 0.8
+                    result_list.append((actions.EndRound(), rank))
 
-        if possible_actions_for_points:
-            # Return most important of these actions
-            return possible_actions_for_points[0]
-        else:
-            # Not enough points for any action
-            return actions.EndRound()
+            # Remove element from list
+            selected_action = result_list[-1][0]
+            if not selected_action.type == 'endRound':
+                self.remove_element_from_list(selected_action)
+
+        return result_list
 
     def get_action_for_candidate_cities(self, candidate_cities, points_to_spend):
         """
         Return the best action for cities infected with a low duration pathogen
         :param candidate_cities: list of cities which could be isolated
         :param points_to_spend: points allowed to be spend
-        :return: Action - best action for the best candidate city
+        :return: One or multiple actions depending on the amount of candidate cities
         """
         # sort for biggest city first
         candidate_cities.sort(key=lambda x: x.population, reverse=True)
         # Sort for most important pathogen
-        city = sorted(candidate_cities, key=lambda x: compute_pathogen_importance(
-            self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen), reverse=True)[0]
+        candidate_cities = sorted(candidate_cities, key=lambda x: compute_pathogen_importance(
+            self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen), reverse=True)
 
-        return self.get_action_for_low_duration_city(city, points_to_spend)
+        # List return in this case (can be 1)
+        return [(self.get_action_for_low_duration_city(city, points_to_spend), 1 / index)
+                for index, city in enumerate(candidate_cities, start=1)]
 
     def get_action_for_isolated_cities(self, isolated_cities, ava_points):
         still_isolated = [city for city in isolated_cities if city.under_quarantine or city.airport_closed]
@@ -254,6 +277,25 @@ class Gameplan:
 
         return self.get_best_city_action(ava_points)
 
+    def get_actions_for_bio_terrorism(self, cities_with_bio_terrorism, ava_points, saved_points):
+        """
+        Get list of action if multiple bio terrorism
+        :param cities_with_bio_terrorism: list of cities in which bio terrorism even hast happend
+        :param ava_points: available points
+        :param saved_points: backup points
+        :return:
+        """
+        best_actions = []
+        for index, city_with_bio_terrorism in enumerate(cities_with_bio_terrorism, start=1):
+            # Get real number of points to counter bio terrorism attack
+            actual_points = saved_points + ava_points
+            best_action = self.get_action_for_low_duration_city(city_with_bio_terrorism, actual_points)
+            if not best_action:
+                best_action = self.get_best_city_action(actual_points)[0][0]
+            best_actions.append((best_action, 1 / index))
+
+        return best_actions
+
     # Specifics for Global actions
     def get_action_for_global_actions(self, ava_points):
         """
@@ -274,26 +316,27 @@ class Gameplan:
             # or and not each pathogen has a medication or a vaccine in development or already developed
             # Do best global action (i.e. develop a medication or vaccine for a so far not considered pathogen
             # Filter out actions for pathogens which are already developing or developed
-            filtered_global_actions = [tmp_action for (tmp_action, _) in self.sorted_global_actions
+            filtered_global_actions = [(tmp_action, rank) for (tmp_action, rank) in self.sorted_global_actions
                                        if not tmp_overall_state_dict[tmp_action.parameters['pathogen']]]
             # Resulting list can not be empty since this would result in the previous if being true,
             # further order is preserved
             # Thus simply get new most important by taking the first one
-            return self.plan_global_action(filtered_global_actions[0], ava_points)
+            return [(self.plan_global_action(action, ava_points), rank) for (action, rank) in filtered_global_actions]
 
         # If non is currently developing
         if not tmp_var_developed:
             # and not each pathogen has either medication or vaccine developed
-            filtered_global_actions = [tmp_action for (tmp_action, _) in self.sorted_global_actions
+            filtered_global_actions = [(tmp_action, rank) for (tmp_action, rank) in self.sorted_global_actions
                                        if not tmp_developed_state_dict[tmp_action.parameters['pathogen']]]
-            return self.plan_global_action(filtered_global_actions[0], ava_points)
+            return [(self.plan_global_action(action, ava_points), rank) for (action, rank) in filtered_global_actions]
 
         # or and each pathogen has either medication or vaccine developed
         # [dynamic max] do city action or best global action if last development finished 5 round agao
         # no check for none, it is impossible that this gets executed when no development has finished
         if self.game.last_development_finished_since >= 5:
             # TODO: Possible improvement: extend features to use for dynamic max and create exceptions
-            return self.plan_global_action(self.sorted_global_actions[0][0], ava_points)
+            return [(self.plan_global_action(action, ava_points), rank)
+                    for (action, rank) in self.sorted_global_actions]
 
         return self.get_best_city_action(ava_points)
 
@@ -304,6 +347,7 @@ class Gameplan:
         or an action using the points that are not used is played such that next round this action is still possible
         :param global_action: a global action which is ready to be build
         :param ava_points: point allowed to use
+        :param rank: rank of global action
         :return: action to perform to achieve doing this action now or later
         """
         action = global_action
@@ -313,7 +357,7 @@ class Gameplan:
         # Check if selected global action is possible
         if ava_points < costs:
             # If not, select an action that makes it possible when just waiting next time
-            action = self.get_best_city_action(ava_points, points_needed=costs)
+            action = self.get_best_city_action(ava_points, points_needed=costs)[0][0]
             # This works because the select action will see that no points to play exists in the 2nd time triggering
             # and thus just ends the round
 
@@ -393,3 +437,23 @@ class Gameplan:
             return None
 
         return actions.CloseAirport(city, max_rounds_for_points_airport)
+
+    def remove_element_from_list(self, selected_action):
+        """
+        Removes selected action element from action list
+        :param selected_action: action
+        """
+        for action_tuple in self.sorted_city_action:
+            action = action_tuple[0]
+            if action.type == 'closeConnection':
+                city = action.parameters['fromCity']
+            else:
+                city = action.parameters['city']
+            if selected_action.type == 'closeConnection':
+                selected_city = selected_action.parameters['fromCity']
+            else:
+                selected_city = selected_action.parameters['city']
+
+            if action.type == selected_action.type and city == selected_city:
+                self.sorted_city_action.remove(action_tuple)
+                break

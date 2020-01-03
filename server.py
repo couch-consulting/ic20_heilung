@@ -33,7 +33,7 @@ def index():
 
     # Heuristics
     # Human heuristic response
-    response = human.get_decision(game)[0]  # 0 := most important
+    response = human.get_decision(game)[0][0]  # [0][0] := most important action
 
     # # Example for random iterations
     # action_builder = ActionBuilder(game)
