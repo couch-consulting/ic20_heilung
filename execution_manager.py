@@ -19,11 +19,12 @@ parser.add_argument('--no_obs', help='Disable Observer', action='store_true')
 parser.add_argument('--epochs', type=int, help='Starts a test run for the specified number of epochs', default=1)
 
 args = parser.parse_args()
+seed = args.seed
 
 base_url = 'http://localhost:' + args.port
 
 # Parse args and build flask startup
-subprocess_cmd = ['python', 'server.py', '--seed', args.seed, '--port', args.port]
+subprocess_cmd = ['python', 'server.py', '--seed', seed, '--port', args.port]
 if args.silent:
     subprocess_cmd.append('--silent')
 if args.no_obs:
@@ -34,6 +35,7 @@ if args.no_obs:
 start = time.time()
 # Start execution
 with subprocess.Popen(subprocess_cmd) as proc:
+    # Wait for flask to spin up
     time.sleep(2)
 
     # Tmp vars
@@ -44,11 +46,11 @@ with subprocess.Popen(subprocess_cmd) as proc:
     # Loop in case of test
     for i in range(args.epochs):
         # Remove observer.json before run, because the observer would just append otherwise.
-        observer_path = f'observations/observer-{args.seed}.json'
+        observer_path = f'observations/observer-{seed}.json'
         if os.path.isfile(observer_path):
             os.remove(observer_path)
         # Play game
-        client = subprocess.Popen([args.client_path, '-u', base_url + '/', '-s', args.seed],
+        client = subprocess.Popen([args.client_path, '-u', base_url + '/', '-s', seed],
                                   stdout=subprocess.DEVNULL)
         client.wait()
 
@@ -59,12 +61,13 @@ with subprocess.Popen(subprocess_cmd) as proc:
             avg_rounds_win += results['rounds']
         else:
             avg_rounds_loss += results['rounds']
-        print(f'Epoch: {i} | Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
+        print(f'Epoch: {i} | Seed: {seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
 
         # Update Seed for next iteration
-        # +1 for death rounds with two Admiral Trips spawnings
-        args.seed = str(int(time.time()) + 1)
-        requests.post(base_url + '/seed/' + args.seed)
+        # +i*1000 for death rounds with two Admiral Trips spawnings
+        # Just add a large number to avoid collisions
+        seed = str(int(time.time()) + i*1000)
+        requests.post(base_url + '/seed/' + seed)
 
     # Print final results
     if args.epochs > 1:
