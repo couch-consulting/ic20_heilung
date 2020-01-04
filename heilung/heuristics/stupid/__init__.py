@@ -1,0 +1,1 @@
+from .stupid import StupidHeuristic
