@@ -80,7 +80,7 @@ class Game:
             'relevant_pathogens_count': len(self.pathogens_in_cities),
             'total_population': self.total_population,
             'relevant_pathogens': [pat.name for pat in self.pathogens_in_cities],
-            'infected_cities': [city.name for city in self.cities_infected],
+            'infected_cities': {city.name: city.outbreak.pathogen.name for city in self.cities_infected},
             'error': self.error,
             'game_events': [event.type for event in self.events],
         }

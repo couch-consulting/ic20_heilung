@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+import os.path
 import subprocess
 import time
+
 import requests
 
 from server import app
@@ -20,7 +22,7 @@ args = parser.parse_args()
 
 base_url = 'http://localhost:' + args.port
 
-# Parse args
+# Parse args and build flask startup
 subprocess_cmd = ['python', 'server.py', '--seed', args.seed, '--port', args.port]
 if args.silent:
     subprocess_cmd.append('--silent')
@@ -41,6 +43,10 @@ with subprocess.Popen(subprocess_cmd) as proc:
 
     # Loop in case of test
     for i in range(args.epochs):
+        # Remove observer.json before run, because the observer would just append otherwise.
+        observer_path = f'observations/observer-{args.seed}.json'
+        if os.path.isfile(observer_path):
+            os.remove(observer_path)
         # Play game
         client = subprocess.Popen([args.client_path, '-u', base_url + '/', '-s', args.seed],
                                   stdout=subprocess.DEVNULL)
@@ -56,7 +62,8 @@ with subprocess.Popen(subprocess_cmd) as proc:
         print(f'Epoch: {i} | Seed: {args.seed} | Outcome: {results["outcome"]} | Rounds: {results["rounds"]}')
 
         # Update Seed for next iteration
-        args.seed = str(int(time.time()))
+        # +1 for death rounds with two Admiral Trips spawnings
+        args.seed = str(int(time.time()) + 1)
         requests.post(base_url + '/seed/' + args.seed)
 
     # Print final results
