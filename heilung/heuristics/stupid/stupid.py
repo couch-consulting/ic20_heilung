@@ -11,11 +11,11 @@ class StupidHeuristic:
     weights = {
         'pathogen': {
             'global': 1,
-            'prevalence': 2,
-            'duration': 0.25,
-            'infectivity': 1,
-            'lethality': 1,
-            'mobility': 1,
+            'prevalence': 1,
+            'duration': 1,
+            'infectivity': 3,
+            'lethality': 4,
+            'mobility': 3,
         },
         'isolation': {
             'global': 1,
@@ -51,8 +51,15 @@ class StupidHeuristic:
         if self.game.points == 0:
             return [actions.EndRound()]
 
+        # Handle BioTerrorism Events with higher priority
+        if len(self.game.has_new_bioTerrorism) > 0:
+            city = self.game.has_new_bioTerrorism[0]
+            if actions.PutUnderQuarantine.is_possible(self.game, 2, city):
+                return [actions.PutUnderQuarantine(city, 2)]
+
         if self.game.round > 1 and self.game.points <=20:
             return [actions.EndRound()]
+
 
         # Add an EndRound action, so action_list will never be empty
         # TODO: Rethink rank
@@ -79,6 +86,7 @@ class StupidHeuristic:
                 (weights['infectivity'] * pathogen.infectivity) +
                 (weights['duration'] * pathogen.duration) +
                 (weights['mobility'] * pathogen.mobility))
+        # print(f'{pathogen.name}: {rank}')
         return rank
 
     def evaluate_pathogens(self):
@@ -118,15 +126,24 @@ class StupidHeuristic:
         if pathogen.mobility >= 0.5:
             self.isolate_cities(pathogen)
 
+        # When a medication for the most relevant pathogen is currently under
+        # development and containment doesn't make sense it may be a good idea
+        # to already prepare a medication for the second most relevant pathogen.
         if (pathogens[relevant_pathogen]['vDev'] or pathogens[relevant_pathogen]['mDev']) and len(relevant_pathogens) > 1:
             second_pathogen = relevant_pathogens[1]
             pathogen = pathogens[second_pathogen]['pathogen']
+
+            if pathogens[second_pathogen]['any_action']:
+                return
 
             action = self.decide_vacc_or_med(pathogen)
             rank = weights['global'] * (
                 (weights['prevalence'] * pathogens[second_pathogen]['prevalence']) *
                 (weights['lethality'] * pathogen.lethality) *
                 (weights['infectivity'] * pathogen.infectivity))
+
+            if action.is_possible(self.game, pathogen):
+                self.action_list.append((rank, action))
 
 
     def decide_vacc_or_med(self, pathogen: Pathogen) -> 'Action':
