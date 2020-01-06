@@ -7,6 +7,7 @@ from heilung.builders.action import ActionBuilder
 from heilung.cli_game.observer import Observer
 from heilung.heuristics.human import human
 from heilung.heuristics.stupid import StupidHeuristic
+from heilung.heuristics.ensemble import ensemble
 from heilung.models import Game
 
 app = Flask(__name__)
@@ -33,13 +34,16 @@ def index():
         last_state_dic['rounds'] = game.round - 1
 
     # Heuristics
-    # Human heuristic response
-
     if app.config['H'] == '1':
         stupid = StupidHeuristic(game)
         response = stupid.get_decision()[0]
     else:
-        response = human.get_decision(game)[0][0]  # [0][0] := most important action
+        # Ensemble test try
+        response = ensemble.get_decision(game)
+        # Human heuristic
+        # response = human.get_decision(game)[0][0]  # [0][0] := most important action
+
+
     # # Example for random iterations
     # action_builder = ActionBuilder(game)
     # action_list = action_builder.get_actions()

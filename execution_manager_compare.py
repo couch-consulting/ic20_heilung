@@ -54,7 +54,7 @@ if args.silent:
 if args.no_obs:
     subprocess_cmd_1.append('--no_obs')
 base_url_1 = 'http://localhost:' + args.port
-version_1 = 'human'
+version_1 = 'ensemble'
 
 subprocess_cmd_2 = ['python', 'server.py', '--seed', seed, '--port', '8989', '--h', '1']
 if args.silent:
@@ -110,9 +110,9 @@ with subprocess.Popen(subprocess_cmd_1) as proc1:
                 elif rounds_1 > rounds_2:
                     score_2 += 1
                 else:
-                    # both get points if both are same
-                    score_2 += 1
-                    score_1 += 1
+                    #  no one gets points, no it can be interpreted as just the difference value of the methods
+                    pass
+
             else:
                 # Both did lose
                 if rounds_1 > rounds_2:
