@@ -34,11 +34,12 @@ def index():
 
     # Heuristics
     # Human heuristic response
-    # response = human.get_decision(game)[0][0]  # [0][0] := most important action
 
-    stupid = StupidHeuristic(game)
-    response = stupid.get_decision()[0]
-
+    if app.config['H'] == '1':
+        stupid = StupidHeuristic(game)
+        response = stupid.get_decision()[0]
+    else:
+        response = human.get_decision(game)[0][0]  # [0][0] := most important action
     # # Example for random iterations
     # action_builder = ActionBuilder(game)
     # action_list = action_builder.get_actions()
@@ -78,11 +79,13 @@ if __name__ == '__main__':
     parser.add_argument('--silent', help='Remove any output of the game', action='store_true')
     parser.add_argument('--port', type=str, help='Port for server', default='5000')
     parser.add_argument('--no_obs', help='Disable Observer', action='store_true')
+    parser.add_argument('--h', type=str, help='Used for switching between heuristics', default='0')
 
     args = parser.parse_args()
     app.config['SEED'] = args.seed
     app.config['SILENT'] = args.silent
     app.config['NO_OBS'] = args.no_obs
+    app.config['H'] = args.h
 
     if args.silent:
         # Mute Flask completely
