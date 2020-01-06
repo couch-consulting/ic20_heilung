@@ -10,11 +10,8 @@ import requests
 from server import app
 
 
-def client(won_games, avg_rounds_win, avg_rounds_loss, base_url, seed_offset=1, version='human'):
-    # Update Seed for next iteration
-    # +i*1000 for death rounds with two Admiral Trips spawnings
-    # Just add a large number to avoid collisions
-    seed = str(int(time.time()) + i * (1000 * seed_offset))
+def client(won_games, avg_rounds_win, avg_rounds_loss, base_url, seed, version='human'):
+
     requests.post(base_url + '/seed/' + seed)
     # Remove observer.json before run, because the observer would just append otherwise.
     observer_path = f'observations/observer-{seed}.json'
@@ -87,17 +84,21 @@ with subprocess.Popen(subprocess_cmd_1) as proc1:
 
         # Loop in case of test
         for i in range(args.epochs):
+            # Update Seed for next iteration
+            # +i*1000 for death rounds with two Admiral Trips spawnings
+            # Just add a large number to avoid collisions
+            seed = str(int(time.time()) + i * (1000))
             won_games_1, avg_rounds_win_1, avg_rounds_loss_1, rounds_1, outcome_1 = client(won_games_1,
                                                                                            avg_rounds_win_1,
                                                                                            avg_rounds_loss_1,
                                                                                            base_url_1,
-                                                                                           seed_offset=1,
+                                                                                           seed,
                                                                                            version=version_1)
             won_games_2, avg_rounds_win_2, avg_rounds_loss_2, rounds_2, outcome_2 = client(won_games_2,
                                                                                            avg_rounds_win_2,
                                                                                            avg_rounds_loss_2,
                                                                                            base_url_2,
-                                                                                           seed_offset=10,
+                                                                                           seed,
                                                                                            version=version_2)
             if outcome_1 == 'win' and outcome_2 != 'win':
                 score_1 += 1
