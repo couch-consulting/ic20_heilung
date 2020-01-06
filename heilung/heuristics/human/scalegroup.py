@@ -18,8 +18,8 @@ class Scalegroup:
 
         # Define influence levels
         self.influence_lvl1 = 0.1
-        self.influence_lvl2 = 0.3
-        self.influence_lvl3 = 0.5
+        self.influence_lvl2 = 0.2
+        self.influence_lvl3q = 0.3
 
     def increase_on_dependency(self, val_to_increase_name, dependent_val, inverted=False):
         """
