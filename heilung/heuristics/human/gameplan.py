@@ -11,6 +11,7 @@ class Gameplan:
     def __init__(self, game, sorted_city_action, sorted_global_actions, weighted_pathogens):
         self.game = game
         self.sorted_city_action = sorted_city_action
+        # [(action, rank) for (action, rank) in sorted_city_action if action.type not in ['launchCampaign', 'exertInfluence', 'applyHygienicMeasures']]
         self.sorted_global_actions = sorted_global_actions
         self.weighted_pathogens = weighted_pathogens
 
@@ -239,8 +240,14 @@ class Gameplan:
             self.weighted_pathogens[x.outbreak.pathogen.name], x.outbreak.pathogen), reverse=True)
 
         # List return in this case (can be 1)
-        return [(self.get_action_for_low_duration_city(city, points_to_spend), 1 / index)
-                for index, city in enumerate(candidate_cities, start=1)]
+        result = []
+        for index, city in enumerate(candidate_cities, start=1):
+            tmp_action = self.get_action_for_low_duration_city(city, points_to_spend)
+            if not tmp_action:
+                tmp_action = self.get_best_city_action(points_to_spend)[0][0]
+            result.append((tmp_action, 1 / index))
+
+        return result
 
     def get_action_for_isolated_cities(self, isolated_cities, ava_points):
         still_isolated = [city for city in isolated_cities if city.under_quarantine or city.airport_closed]
