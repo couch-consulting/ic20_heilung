@@ -21,7 +21,7 @@ def combine_lists(rl_1, rl_2, bias):
     new_actio_rank_list = []
     for indx_1, s_action, in enumerate(rl_1, start=1):
         # Bias such that action which were more important in s_heuristic stay more important overall
-        tmp_action_rank = 1 + bias / indx_1
+        tmp_action_rank = (1 + bias) / indx_1
 
         for indx_2, h_action in enumerate(rl_2, start=1):
             if same(s_action, h_action):
@@ -35,13 +35,10 @@ def get_decision(game: 'Game'):
     stupid = StupidHeuristic(game)
     stupid_rl = stupid.get_decision()  # list of action
 
-    # TODO neu machen mit bias und vollstädniger liste aka correct ensemble
-    # TODO bedenken: 1-zu-1-identisch oder nur typ/pathogen | alle listen element bedacht und verglichen | bias
-    # TODO could build training for this like # better than the other one
     human_rl = [action for (action, rank) in human.get_decision(game)]  # list of (action, rank) tuples
 
-    list_bias_human = combine_lists(human_rl, stupid_rl, 1.35)
-    list_bias_stupid = combine_lists(stupid_rl, human_rl, 2)
+    list_bias_human = combine_lists(human_rl, stupid_rl, 0.7)
+    list_bias_stupid = combine_lists(stupid_rl, human_rl, 1)
 
     for (action, rank) in list_bias_human:
         no_similar_exists = True
@@ -56,12 +53,11 @@ def get_decision(game: 'Game'):
         if no_similar_exists:
             list_bias_stupid.append((action, rank))
 
-    new_actio_rank_list = list_bias_stupid
-
+    mreged_list = list_bias_stupid
 
     # Sort for best
-    new_actio_rank_list.sort(key=lambda x: x[1], reverse=True)
+    mreged_list.sort(key=lambda x: x[1], reverse=True)
 
     # print(new_actio_rank_list)
 
-    return new_actio_rank_list[0][0]
+    return mreged_list[0][0]
