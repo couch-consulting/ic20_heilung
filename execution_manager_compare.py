@@ -56,12 +56,12 @@ if args.no_obs:
 base_url_1 = 'http://localhost:' + args.port
 version_1 = 'ensemble'
 
-subprocess_cmd_2 = ['python', 'server.py', '--seed', seed, '--port', '8989', '--h', '1']
+subprocess_cmd_2 = ['python', 'server.py', '--seed', seed, '--port', str(int(args.port) + 1000), '--h', '1']
 if args.silent:
     subprocess_cmd_2.append('--silent')
 if args.no_obs:
     subprocess_cmd_2.append('--no_obs')
-base_url_2 = 'http://localhost:' + '8989'
+base_url_2 = 'http://localhost:' + str(int(args.port) + 1000)
 version_2 = 'stupid'
 # Msr time
 start = time.time()
