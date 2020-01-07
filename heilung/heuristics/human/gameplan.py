@@ -44,22 +44,13 @@ class Gameplan:
         """
         # Tmp vars
         ava_points = self.game.points
-        saved_points = 0
-
-        # Build up fall back points for bio terrorism and isolation in round X gameplan
-        if self.game.round > 1:
-            ava_points -= 20
-            saved_points = 20
-
-        if ava_points <= 0:
-            return actions.EndRound()
 
         # Round 1 Gameplan - special because guaranteed to have 40 points and early in game
         if self.game.round == 1:
             return self.round_1_gameplan(ava_points)
 
         # Round X Gameplan
-        return self.round_x_gameplan(ava_points, saved_points)
+        return self.round_x_gameplan(ava_points)
 
     # Gameplan
     def round_1_gameplan(self, ava_points):
@@ -103,13 +94,18 @@ class Gameplan:
         # Follow up: end round (wait)
         return self.get_best_city_action(ava_points, points_needed=actions.DevelopVaccine.get_costs())
 
-    def round_x_gameplan(self, ava_points, saved_points):
+    def round_x_gameplan(self, ava_points):
         """
         Get best action any round greater 1
         :param ava_points: points to spend in this round
         :param saved_points: Fall back points which can be spend
         :return: Action object or list of action objects depending on the gameplan situation
         """
+
+        # Build up fall back points for bio terrorism and isolation in round X gameplan
+        ava_points -= 20
+        saved_points = 20
+
         isolated_cities = self.get_isolated_cities()
         cities_with_bio_terrorism = [city for city in self.game.has_new_bioTerrorism if city not in isolated_cities]
 
@@ -119,9 +115,13 @@ class Gameplan:
             actual_points = saved_points + ava_points
             return self.get_action_for_isolated_cities(isolated_cities, actual_points)
 
-        # Bio Terrorism game plan (counter bio terrorism of completely new pathogens
+        # Bio Terrorism game plan (counter bio terrorism of completely new pathogens)
         if cities_with_bio_terrorism:
             return self.get_actions_for_bio_terrorism(cities_with_bio_terrorism, ava_points, saved_points)
+
+        # Save points
+        if ava_points <= 0:
+            return actions.EndRound()
 
         if not self.sorted_global_actions:
             # If no global actions anymore, do most important city action
@@ -311,7 +311,13 @@ class Gameplan:
         :return: Action object
         """
         tmp_var_developing, tmp_var_developed, tmp_var_developing_or_developed, \
-        tmp_developed_state_dict, tmp_overall_state_dict = self.get_pat_state()
+        tmp_developed_state_dict, tmp_overall_state_dict, tmp_every_pat_has_dev, tmp_any_pat_has_ava = self.get_pat_state()
+
+        # TODO test
+        # If for every pathogen something is developing and nothing is already developed
+        if tmp_every_pat_has_dev and not tmp_any_pat_has_ava:
+            # just save the points to deploy once everything is developed
+            return actions.EndRound()
 
         # If at least one medication or vaccine is still developing
         if tmp_var_developing:
@@ -390,8 +396,9 @@ class Gameplan:
         """
         isolated_cities = []
         for pathogen in self.game.pathogens_in_cities:
-            # only cities with mob higher 0 are important because mob 0 pats are and will be isolated for ever
-            if len(self.game.get_cities_with_pathogen(pathogen)) == 1 and pathogen.mobility > 0:
+            # only cities with mob higher 0 are important because mob 0 pats are and will be isolated for ever mostly
+            if len(self.game.get_cities_with_pathogen(pathogen)) == 1 and pathogen.mobility > 0 \
+                    and not self.game.pat_state_dict[pathogen.name]['any_action']:
                 # Get new infected or isolated city
                 tmp_city = self.game.get_cities_with_pathogen(pathogen)[0]
                 isolated_cities.append(tmp_city)
@@ -410,6 +417,9 @@ class Gameplan:
         tmp_var_developing_or_developed = True
         tmp_overall_state_dict = {}
         tmp_developed_state_dict = {}
+        # tmp var
+        tmp_every_pat_has_dev = True
+        tmp_any_pat_has_ava = False
         for pat_name, state_dict in self.game.pat_state_dict.items():
             developing_state = (state_dict['mDev'] or state_dict['vDev'])
             developed_state = (state_dict['mAva'] or state_dict['vAva'])
@@ -423,8 +433,11 @@ class Gameplan:
             tmp_var_developed = tmp_var_developed and developed_state
             # Stays True if every pat has at least medication or vaccine developing or developed
             tmp_var_developing_or_developed = tmp_var_developing_or_developed and overall_state
+            # Other
+            tmp_every_pat_has_dev = tmp_every_pat_has_dev and developing_state
+            tmp_any_pat_has_ava = tmp_any_pat_has_ava or developed_state
 
-        return tmp_var_developing, tmp_var_developed, tmp_var_developing_or_developed, tmp_developed_state_dict, tmp_overall_state_dict
+        return tmp_var_developing, tmp_var_developed, tmp_var_developing_or_developed, tmp_developed_state_dict, tmp_overall_state_dict, tmp_every_pat_has_dev, tmp_any_pat_has_ava
 
     @staticmethod
     def get_action_for_low_duration_city(city, points_to_spend):
@@ -438,7 +451,7 @@ class Gameplan:
         # No need to check if already closed/under quarantine since first round)
 
         if max_rounds_for_points:
-            return actions.PutUnderQuarantine(city, max_rounds_for_points)
+            return actions.PutUnderQuarantine(city, max(max_rounds_for_points, 2))  # TODO max_rounds_for_points
 
         if not city.connections:
             return None

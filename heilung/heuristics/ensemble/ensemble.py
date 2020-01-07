@@ -3,7 +3,7 @@ from ..stupid import StupidHeuristic
 
 
 def same(action_1, action_2):
-    if action_1 and action_2 and action_1.type == action_2.type:
+    if action_1 and action_2 and action_1 == action_2:
         if action_1.type == 'endRound':
             return True
         elif action_1.type in ['developMedication', 'developVaccine']:
