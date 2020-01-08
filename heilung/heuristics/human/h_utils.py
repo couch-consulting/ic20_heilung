@@ -8,7 +8,7 @@ biasMAP = {
     # Bias based upon idea how much more important one action is than another
     # not based upon the game state but based upon the game plan
     actions.DeployVaccine: 1,
-    actions.DeployMedication: 0.75,
+    actions.DeployMedication: 0.9,
 
     actions.PutUnderQuarantine: 0.7,
     actions.CloseAirport: 0.65,
@@ -47,7 +47,7 @@ def compute_pathogen_importance(pathogen_importance, pathogen_original):
     # Combine the importance of the property with its actual value
     # Invert duration of original pathogen since a lower duration is more important
     return 1 * pathogen_importance.infectivity * pathogen_original.infectivity \
-           + 1 * pathogen_importance.lethality * pathogen_original.lethality \
+           + 2 * pathogen_importance.lethality * pathogen_original.lethality \
            + 1 * pathogen_importance.duration * (1 - pathogen_original.duration) \
            + 1 * pathogen_importance.mobility * pathogen_original.mobility
 
@@ -66,7 +66,6 @@ def compute_combined_importance(city_ranks, ranked_city_actions_per_city):
             # Take average of all importance values
             new_rank = (city_rank + biasMAP[type(action)] + action_rank) / 3
             result.append((action, new_rank))
-
     # Sort
     if result:
         result.sort(key=lambda x: x[1], reverse=True)

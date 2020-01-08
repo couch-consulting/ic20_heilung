@@ -35,7 +35,8 @@ def get_decision(game: 'Game'):
     combined_ranks = h_utils.compute_combined_importance(city_ranks, ranked_city_actions_per_city)
 
     # Init Gameplan
-    gameplan = Gameplan(game, combined_ranks, ranked_global_actions, stateheuristic.weighted_pathogens)
+    gameplan = Gameplan(game, combined_ranks, ranked_global_actions, stateheuristic.weighted_pathogens,
+                        stateheuristic.dev_needed)
 
     # Build a list of actions whereby the first one is most important
     action_list = gameplan.build_action_list()

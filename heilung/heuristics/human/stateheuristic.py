@@ -20,6 +20,8 @@ class Stateheuristic:
         self.weighted_pathogens = self.reweigh_pathogens()
         # Reweigh the pathogen for each city they are in
         self.city_weighted_pathogens = self.reweigh_pathogen_for_city()
+        # Store for a feature that is needed later
+        self.dev_needed = {}
 
     # Global Action Heuristic
     def rank_global_actions(self):
@@ -36,11 +38,6 @@ class Stateheuristic:
             pathogen = self.relevant_pathogens_dict[adapted_pathogen_name[:-3]]
 
             # Features
-            # Both values are rather under guessed - since actual values can not be precisely calculated
-            # Further immunity to other pathogens is not regarded and thus values are also different
-            total_infected = self.game.get_percentage_of_infected(pathogen)
-            # total_immune = self.game.get_percentage_of_immune(pathogen)
-
             medication_state = (pathogen not in self.game.pathogens_with_medication
                                 and pathogen not in self.game.pathogens__with_developing_medication)
             vaccine_state = (pathogen not in self.game.pathogens_with_vaccine
@@ -49,53 +46,51 @@ class Stateheuristic:
             if name_ending == '_dV':
                 if vaccine_state:
                     # vaccine importance
-                    # The more mobile the pathogen, the more important to deploy the vaccine
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name, pathogen.mobility
-                                                               * global_action_scale.influence_lvl2)
+
                     # The longer the duration the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name, pathogen.duration
                                                                * global_action_scale.influence_lvl2)
                     # The less lethal the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name, (1 - pathogen.lethality)
                                                                * global_action_scale.influence_lvl2)
-                    # The more infective the more important
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name, pathogen.infectivity
+
+                    # TODO adapt below
+                    # More important the higher or the lower it is but not really in between thus formula: 4(x-0.5)^2
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               max(4 * (pathogen.mobility - 0.5) ** 2, 0.25)
                                                                * global_action_scale.influence_lvl2)
 
-                    # The more people are infected the less important is vaccine
-                    global_action_scale.decrease_on_dependency(adapted_pathogen_name, total_infected
-                                                               * global_action_scale.influence_lvl3)
+                    # The less infective the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name, (1 - pathogen.infectivity)
+                                                               * global_action_scale.influence_lvl2)
 
-                    # TODO: Possible improvement: make vaccine preferred more often again by below influence
-                    # # The less people are immune the more important is vaccine -
-                    # global_action_scale.increase_on_dependency(adapted_pathogen_name,
-                    #                (1 - total_immune) * global_action_scale.influence_lvl2)
-
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               int((len(self.game.pathogens_in_cities) == 1) or (len(
+                                                                   self.game.get_cities_with_pathogen(pathogen)) == 1))
+                                                               * global_action_scale.influence_lvl2)
                 else:
                     global_action_scale.sg[adapted_pathogen_name] = 0
             else:
                 if medication_state:
                     # medication importance:
-                    # The less mobile the pathogen, the more important
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name, (1 - pathogen.mobility)
-                                                               * global_action_scale.influence_lvl2)
+
                     # The shorter the duration of the pathogen the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name, (1 - pathogen.duration)
                                                                * global_action_scale.influence_lvl2)
                     # The more lethal the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name, pathogen.lethality
                                                                * global_action_scale.influence_lvl3)
-                    # The less infective the more important
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name, (1 - pathogen.infectivity)
+
+                    # TODO below
+                    # The less mobile the pathogen, the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name,
+                                                               (1 - pathogen.mobility)
                                                                * global_action_scale.influence_lvl2)
 
-                    # The more people are infected the more important is medication
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name, total_infected
-                                                               * global_action_scale.influence_lvl3)
+                    # The more infective the more important
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name, (pathogen.infectivity)
+                                                               * global_action_scale.influence_lvl2)
 
-                    # # The less people are immune the less-more important is medication,
-                    # global_action_scale.increase_on_dependency(adapted_pathogen_name,
-                    #                                            total_immune * global_action_scale.influence_lvl2)
 
                 else:
                     global_action_scale.sg[adapted_pathogen_name] = 0
@@ -190,49 +185,66 @@ class Stateheuristic:
             # TODO: Possible new feature - average prevalence of neighbors and what pathogen they have
 
             # Weigh Vaccine
-            if vac_state:
-                # The more mobile the pathogen, the more important to deploy the vaccine
-                action_scale.increase_on_dependency('deploy_vaccine', pathogen.mobility * action_scale.influence_lvl2)
-                # The longer the duration the more important
-                action_scale.increase_on_dependency('deploy_vaccine', pathogen.duration * action_scale.influence_lvl2)
-                # The less lethal the more important
-                action_scale.increase_on_dependency('deploy_vaccine',
-                                                    (1 - pathogen.lethality) * action_scale.influence_lvl2)
-                # The more infective the more important
-                action_scale.increase_on_dependency('deploy_vaccine',
-                                                    pathogen.infectivity * action_scale.influence_lvl2)
+            # The more mobile the pathogen, the more important to deploy the vaccine
+            action_scale.increase_on_dependency('deploy_vaccine', pathogen.mobility * action_scale.influence_lvl2)
+            # The longer the duration the more important
+            action_scale.increase_on_dependency('deploy_vaccine', pathogen.duration * action_scale.influence_lvl2)
+            # The less lethal the more important
+            action_scale.increase_on_dependency('deploy_vaccine',
+                                                (1 - pathogen.lethality) * action_scale.influence_lvl2)
+            # The more infective the more important
+            action_scale.increase_on_dependency('deploy_vaccine',
+                                                pathogen.infectivity * action_scale.influence_lvl2)
 
-                # If no anti vacs in city, more important
-                action_scale.increase_on_dependency('deploy_vaccine', int(not anti_vac) * action_scale.influence_lvl1)
-                # If med already deployed in city, more important
-                action_scale.increase_on_dependency('deploy_vaccine', int(dep_meds) * action_scale.influence_lvl2)
-            else:
+            # If no anti vacs in city, more important
+            action_scale.increase_on_dependency('deploy_vaccine', int(not anti_vac) * action_scale.influence_lvl1)
+            # If med already deployed in city, more important
+            action_scale.increase_on_dependency('deploy_vaccine', int(dep_meds) * action_scale.influence_lvl2)
+
+            # Increase if low prev
+            action_scale.increase_on_dependency('deploy_vaccine',
+                                                (1 - city.outbreak.prevalence) * action_scale.influence_lvl3)
+
+            # Medication Ranking
+            # The less mobile the pathogen, the more important
+            action_scale.increase_on_dependency('deploy_medication',
+                                                (1 - pathogen.mobility) * action_scale.influence_lvl2)
+            # The shorter the duration of the pathogen the more important
+            action_scale.increase_on_dependency('deploy_medication',
+                                                (1 - pathogen.duration) * action_scale.influence_lvl2)
+            # The more lethal the more important
+            action_scale.increase_on_dependency('deploy_medication',
+                                                pathogen.lethality * action_scale.influence_lvl3)
+            # The less infective the more important
+            action_scale.increase_on_dependency('deploy_medication',
+                                                (1 - pathogen.infectivity) * action_scale.influence_lvl2)
+
+            # If anti vacs in city, more important
+            action_scale.increase_on_dependency('deploy_medication', int(anti_vac) * action_scale.influence_lvl1)
+            # For each time medication was already deployed, reduce importance (hard cap 5 times in one city)
+            action_scale.decrease_on_dependency('deploy_medication',
+                                                len(city.deployed_medication) / 5 * action_scale.influence_lvl3)
+            # Increase if high prev
+            action_scale.increase_on_dependency('deploy_medication',
+                                                city.outbreak.prevalence * action_scale.influence_lvl3)
+            tmp_val = action_scale.sg['deploy_vaccine']
+
+            if not vac_state:
+                if action_scale.sg['deploy_vaccine'] > action_scale.sg['deploy_medication']:
+                    # Counts how often vaccine was needed but not developed
+                    self.dev_needed[pathogen.name] = self.dev_needed.get(pathogen.name, 0) + 1
+
                 # In case the vaccine is not yet developed
                 action_scale.sg['deploy_vaccine'] = 0
 
-            # Medication Ranking
-            if med_state:
-                # The less mobile the pathogen, the more important
-                action_scale.increase_on_dependency('deploy_medication',
-                                                    (1 - pathogen.mobility) * action_scale.influence_lvl2)
-                # The shorter the duration of the pathogen the more important
-                action_scale.increase_on_dependency('deploy_medication',
-                                                    (1 - pathogen.duration) * action_scale.influence_lvl2)
-                # The more lethal the more important
-                action_scale.increase_on_dependency('deploy_medication',
-                                                    pathogen.lethality * action_scale.influence_lvl3)
-                # The less infective the more important
-                action_scale.increase_on_dependency('deploy_medication',
-                                                    (1 - pathogen.infectivity) * action_scale.influence_lvl2)
+            if not med_state:
+                if action_scale.sg['deploy_medication'] > tmp_val:
+                    self.dev_needed[pathogen.name] = self.dev_needed.get(pathogen.name, 0) + 1
 
-                # If anti vacs in city, more important
-                action_scale.increase_on_dependency('deploy_medication', int(anti_vac) * action_scale.influence_lvl1)
-                # For each time medication was already deployed, reduce importance (hard cap 5 times in one city)
-                action_scale.decrease_on_dependency('deploy_medication',
-                                                    len(city.deployed_medication) / 5 * action_scale.influence_lvl3)
-            else:
                 # In case the medication is not yet developed
                 action_scale.sg['deploy_medication'] = 0
+
+
         else:
             action_scale.sg['deploy_vaccine'] = 0
             action_scale.sg['deploy_medication'] = 0
@@ -295,8 +307,9 @@ class Stateheuristic:
 
         # Get rounds for actions - default to max since gameplan handles this
         close_connection_rounds = actions.CloseConnection.get_max_rounds(self.game.points)
-        close_airport_rounds = actions.CloseAirport.get_max_rounds(self.game.points)
-        put_under_quarantine_rounds = actions.PutUnderQuarantine.get_max_rounds(self.game.points)
+        # Max possible round number is 5 and 2 because for these numbers you can always repeat the action when its done
+        close_airport_rounds = min(actions.CloseAirport.get_max_rounds(self.game.points), 5)
+        put_under_quarantine_rounds = min(actions.PutUnderQuarantine.get_max_rounds(self.game.points), 2)
 
         # Readjust in case of impossibility
         # Check if connections exists
