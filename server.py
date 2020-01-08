@@ -12,7 +12,6 @@ from heilung.models import Game
 
 app = Flask(__name__)
 
-action_plan = list()
 last_state_dic = {}
 
 
@@ -34,7 +33,7 @@ def index():
         last_state_dic['rounds'] = game.round - 1
 
     # Heuristics
-    if app.config['H'] == '1':
+    if app.config.get('H', 0) == '1':
         stupid = StupidHeuristic(game)
         response = stupid.get_decision()[0]
     else:
@@ -50,7 +49,7 @@ def index():
     # response = action_builder.random_action(action_list)
 
     # Output
-    if not app.config['SILENT']:
+    if not app.config.get('SILENT', False):
         # Temporary to monitor round change
         print(game.state_recap(short=True))
         if 'city' in response.parameters and game.cities[response.parameters['city']].outbreak:
@@ -58,8 +57,8 @@ def index():
         print(response.build_action())
 
     # Observer
-    if not app.config['NO_OBS']:
-        Observer(game, response, app.config['SEED'])
+    if not app.config.get('NO_OBS', False):
+        Observer(game, response, app.config.get('SEED', 'unknown'))
 
     return response.build_action()
 
