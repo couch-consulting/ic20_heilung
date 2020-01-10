@@ -20,7 +20,7 @@ def get_decision(game: 'Game'):
     # Simple shortcut to avoid recomputing everything in this case
     # because action list would consist only of this element in the end
     if game.points == 0:
-        return [(actions.EndRound(), 1)]  # if decide to add value: (actions.EndRound(), 1.0)
+        return [actions.EndRound()]  # if decide to add value: (actions.EndRound(), 1.0)
 
     # Rank of each global action (Scaled to 0-1 whereby most important is 1)
     ranked_global_actions = stateheuristic.rank_global_actions()
