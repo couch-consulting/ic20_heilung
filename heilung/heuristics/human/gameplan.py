@@ -22,20 +22,16 @@ class Gameplan:
         Build a list of actions whereby the first one is the most important action to perform in this round
         List may vary depending on the gameplan
             - sometimes only 1 action is suggested due to the game state and gameplan
-        :return: List of tuples of actions and an importance value
+        :return: List[Action]
         """
 
         result = self.get_best_action()
         if not isinstance(result, list):
-            result = [(result, 1)]
+            result = [result]
         else:
-            # Resacle
-            max_rank = max(map(lambda x: x[1], result))
-            result = list(map(lambda x: (x[0], x[1] / max_rank), result))
+            result = [action for (action, rank) in result]
 
-        action_list = result
-
-        return action_list
+        return result
 
     def get_best_action(self):
         """

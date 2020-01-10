@@ -67,9 +67,8 @@ def merge_lists(rl_1, rl_2):
 
 def get_decision(game: 'Game'):
     stupid = StupidHeuristic(game)
-    stupid_rl = stupid.get_decision()  # list of action
-
-    human_rl = [action for (action, rank) in human.get_decision(game)]  # list of (action, rank) tuples
+    stupid_rl = stupid.get_decision()
+    human_rl = human.get_decision(game)
 
     list_human = compute_combined_rank(human_rl, stupid_rl)
     list_stupid = compute_combined_rank(stupid_rl, human_rl)

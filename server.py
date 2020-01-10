@@ -40,7 +40,7 @@ def index():
         # Ensemble test try
         response = ensemble.get_decision(game)
         # Human heuristic
-        # response = human.get_decision(game)[0][0]  # [0][0] := most important action
+        # response = human.get_decision(game)[0]  # [0] := most important action
 
 
     # # Example for random iterations
