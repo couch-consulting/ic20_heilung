@@ -27,7 +27,6 @@ def compute_combined_rank(rl_1, rl_2):
     """
     new_action_rank_list = []
     for indx_1, tmp_action_1, in enumerate(rl_1, start=1):
-        # Bias such that action which were more important in rl_1 stay more important overall
         tmp_action_rank = 1 / indx_1
 
         for indx_2, tmp_action_2 in enumerate(rl_2, start=1):

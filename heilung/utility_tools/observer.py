@@ -1,9 +1,6 @@
 from os.path import isfile
 import json
 
-from heilung.models import actions
-from heilung.models.pathogen import Pathogen
-
 
 class Observer:
     """Observes the game and what is happening.

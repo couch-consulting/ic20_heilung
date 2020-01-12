@@ -7,7 +7,7 @@ import random
 
 
 class ActionBuilder:
-    """ Builder for Actions
+    """ Builds a list of all possible actions which then can be randomly chosen
     """
 
     def __init__(self, game):
