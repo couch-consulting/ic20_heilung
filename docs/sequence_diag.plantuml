@@ -1,0 +1,47 @@
+@startuml SequenceDiagram
+skinparam monochrome true
+
+actor client
+boundary flask
+control server
+control game
+control Observer
+
+collections Heuristics
+control EnsembleHeuristic
+
+activate client
+activate flask
+client -> flask : Send current state via POST
+
+flask -> server : JSON Input
+activate server
+
+server -> game : JSON Input
+activate game
+game -> server: game state object with precalculated statistics
+deactivate game
+
+loop for each heuristic
+    server -> Heuristics : game state object
+    activate Heuristics
+    Heuristics -> server : list of actions ordered by internal ranking
+    deactivate Heuristics
+end
+
+server -> EnsembleHeuristic : ranked actions from both heuristics
+activate EnsembleHeuristic
+EnsembleHeuristic -> server : best action to execute
+deactivate EnsembleHeuristic
+
+alt if enabled
+    server -> Observer : game state object and action to be executed
+end
+
+server -> flask : action as JSON response
+deactivate server
+
+flask -> client : action as JSON response
+deactivate flask
+
+@enduml
