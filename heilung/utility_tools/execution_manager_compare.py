@@ -129,13 +129,13 @@ with subprocess.Popen(subprocess_cmd_1) as proc1:
 
         # Print final results
         if args.epochs > 1:
-            avg_rounds_loss = avg_rounds_loss_1 / (args.epochs - won_games_1)
+            avg_rounds_loss = avg_rounds_loss_1 / max((args.epochs - won_games_1), 1)
             avg_rounds_win = avg_rounds_win_1 / won_games_1
             win_ratio = won_games_1 / args.epochs
             print(
                 f'[1]: Win %: {win_ratio}| Avg. Won Rounds: {avg_rounds_win} | Avg. Loss Rounds: {avg_rounds_loss} | Epochs: {args.epochs}')
             print(f'Score of {version_1} heuristic is {score_1}')
-            avg_rounds_loss = avg_rounds_loss_2 / (args.epochs - won_games_2)
+            avg_rounds_loss = avg_rounds_loss_2 / max((args.epochs - won_games_2), 1)
             avg_rounds_win = avg_rounds_win_2 / won_games_2
             win_ratio = won_games_2 / args.epochs
             print(
