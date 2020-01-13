@@ -1,14 +1,14 @@
 import argparse
 import sys
 
-from flask import Flask, abort, g, request
+from flask import Flask, abort, request
 
-from heilung.builders.action import ActionBuilder
-from heilung.cli_game.observer import Observer
+from heilung.utility_tools.observer import Observer
 from heilung.heuristics.human import human
-from heilung.heuristics.stupid import StupidHeuristic
 from heilung.heuristics.ensemble import ensemble
+from heilung.heuristics.stupid import StupidHeuristic
 from heilung.models import Game
+
 
 app = Flask(__name__)
 
@@ -36,17 +36,10 @@ def index():
     if app.config.get('H', 0) == '1':
         stupid = StupidHeuristic(game)
         response = stupid.get_decision()[0]
+    elif app.config.get('H', 0) == '2':
+        response = human.get_decision(game)[0]
     else:
-        # Ensemble test try
         response = ensemble.get_decision(game)
-        # Human heuristic
-        # response = human.get_decision(game)[0]  # [0] := most important action
-
-
-    # # Example for random iterations
-    # action_builder = ActionBuilder(game)
-    # action_list = action_builder.get_actions()
-    # response = action_builder.random_action(action_list)
 
     # Output
     if not app.config.get('SILENT', False):

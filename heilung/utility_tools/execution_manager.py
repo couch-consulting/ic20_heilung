@@ -46,7 +46,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
     # Loop in case of test
     for i in range(args.epochs):
         # Remove observer.json before run, because the observer would just append otherwise.
-        observer_path = f'observations/observer-{seed}.json'
+        observer_path = f'../../observations/observer-{seed}.json'
         if os.path.isfile(observer_path):
             os.remove(observer_path)
         # Play game
@@ -71,7 +71,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
 
     # Print final results
     if args.epochs > 1:
-        avg_rounds_loss = avg_rounds_loss / (args.epochs - won_games)
+        avg_rounds_loss = avg_rounds_loss / max((args.epochs - won_games), 1)
         avg_rounds_win = avg_rounds_win / won_games
         win_ratio = won_games / args.epochs
         print(

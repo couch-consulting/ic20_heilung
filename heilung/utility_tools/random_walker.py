@@ -122,3 +122,9 @@ class ActionBuilder:
             action.parameters['rounds'] = random.randint(1, action.parameters['rounds'])
 
         return action
+
+    # USAGE
+    # # Example for random iterations
+    # action_builder = ActionBuilder(game)
+    # action_list = action_builder.get_actions()
+    # response = action_builder.random_action(action_list)
