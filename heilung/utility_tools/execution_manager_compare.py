@@ -42,7 +42,7 @@ parser.add_argument('--silent', help='Remove any output of the server', action='
 parser.add_argument('--port', type=str, help='Port for server', default='5000')
 parser.add_argument('--no_obs', help='Disable Observer', action='store_true')
 parser.add_argument('--epochs', type=int, help='Starts a test run for the specified number of epochs', default=1)
-parser.add_argument('--compare', type=tuple, help='Heuristics to compare', default=(('Human', 2), ('Ensemble', 0)))
+parser.add_argument('--compare', type=tuple, help='Heuristics to compare', default=(('Human', '2'), ('Ensemble', '0')))
 
 args = parser.parse_args()
 seed = args.seed
@@ -50,7 +50,7 @@ heuristic_1 = args.compare[0]
 heuristic_2 = args.compare[1]
 
 # Parse args and build flask startup
-subprocess_cmd_1 = ['python', 'server.py', '--seed', seed, '--port', args.port, '--h', heuristic_1[1]]
+subprocess_cmd_1 = ['python', '../../server.py', '--seed', seed, '--port', args.port, '--h', heuristic_1[1]]
 if args.silent:
     subprocess_cmd_1.append('--silent')
 if args.no_obs:
@@ -58,7 +58,8 @@ if args.no_obs:
 base_url_1 = 'http://localhost:' + args.port
 version_1 = heuristic_1[0]
 
-subprocess_cmd_2 = ['python', 'server.py', '--seed', seed, '--port', str(int(args.port) + 1000), '--h', heuristic_2[1]]
+subprocess_cmd_2 = ['python', '../../server.py', '--seed', seed, '--port', str(int(args.port) + 1000), '--h',
+                    heuristic_2[1]]
 if args.silent:
     subprocess_cmd_2.append('--silent')
 if args.no_obs:

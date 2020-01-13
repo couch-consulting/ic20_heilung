@@ -7,8 +7,6 @@ import time
 
 import requests
 
-from server import app
-
 parser = argparse.ArgumentParser(description='Helper Script to run server and client')
 parser.add_argument('--client-path', type=str, help='Path to ic20 client', default='ic20_linux')
 parser.add_argument('--seed', type=str, help='A custom seed to replace the randomly generated one',
@@ -24,7 +22,7 @@ seed = args.seed
 base_url = 'http://localhost:' + args.port
 
 # Parse args and build flask startup
-subprocess_cmd = ['python', 'server.py', '--seed', seed, '--port', args.port]
+subprocess_cmd = ['python', '../../server.py', '--seed', seed, '--port', args.port]
 if args.silent:
     subprocess_cmd.append('--silent')
 if args.no_obs:
