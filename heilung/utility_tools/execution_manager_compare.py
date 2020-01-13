@@ -11,10 +11,9 @@ from server import app
 
 
 def client(won_games, avg_rounds_win, avg_rounds_loss, base_url, seed, version='human'):
-
     requests.post(base_url + '/seed/' + seed)
     # Remove observer.json before run, because the observer would just append otherwise.
-    observer_path = f'observations/observer-{seed}.json'
+    observer_path = f'../../observations/observer-{seed}.json'
     if os.path.isfile(observer_path):
         os.remove(observer_path)
 
@@ -43,30 +42,35 @@ parser.add_argument('--silent', help='Remove any output of the server', action='
 parser.add_argument('--port', type=str, help='Port for server', default='5000')
 parser.add_argument('--no_obs', help='Disable Observer', action='store_true')
 parser.add_argument('--epochs', type=int, help='Starts a test run for the specified number of epochs', default=1)
+parser.add_argument('--compare', type=tuple, help='Heuristics to compare', default=(('Human', 2), ('Ensemble', 0)))
 
 args = parser.parse_args()
 seed = args.seed
+heuristic_1 = args.compare[0]
+heuristic_2 = args.compare[1]
 
 # Parse args and build flask startup
-subprocess_cmd_1 = ['python', 'server.py', '--seed', seed, '--port', args.port]
+subprocess_cmd_1 = ['python', 'server.py', '--seed', seed, '--port', args.port, '--h', heuristic_1[1]]
 if args.silent:
     subprocess_cmd_1.append('--silent')
 if args.no_obs:
     subprocess_cmd_1.append('--no_obs')
 base_url_1 = 'http://localhost:' + args.port
-version_1 = 'ensemble'
+version_1 = heuristic_1[0]
 
-subprocess_cmd_2 = ['python', 'server.py', '--seed', seed, '--port', str(int(args.port) + 1000), '--h', '1']
+subprocess_cmd_2 = ['python', 'server.py', '--seed', seed, '--port', str(int(args.port) + 1000), '--h', heuristic_2[1]]
 if args.silent:
     subprocess_cmd_2.append('--silent')
 if args.no_obs:
     subprocess_cmd_2.append('--no_obs')
 base_url_2 = 'http://localhost:' + str(int(args.port) + 1000)
-version_2 = 'stupid'
-# Msr time
+version_2 = heuristic_2[0]
+
+# Counter vars
 start = time.time()
 score_1 = 0
 score_2 = 0
+
 # Start execution
 with subprocess.Popen(subprocess_cmd_1) as proc1:
     with subprocess.Popen(subprocess_cmd_2) as proc2:
