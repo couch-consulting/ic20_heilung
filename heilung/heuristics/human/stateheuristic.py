@@ -88,9 +88,8 @@ class Stateheuristic:
                                                                * global_action_scale.influence_lvl2)
 
                     # The more infective the more important
-                    global_action_scale.increase_on_dependency(adapted_pathogen_name, (pathogen.infectivity)
+                    global_action_scale.increase_on_dependency(adapted_pathogen_name, pathogen.infectivity
                                                                * global_action_scale.influence_lvl2)
-
 
                 else:
                     global_action_scale.sg[adapted_pathogen_name] = 0
@@ -243,7 +242,6 @@ class Stateheuristic:
 
                 # In case the medication is not yet developed
                 action_scale.sg['deploy_medication'] = 0
-
 
         else:
             action_scale.sg['deploy_vaccine'] = 0
