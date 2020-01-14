@@ -1,5 +1,7 @@
-from heilung.models import actions
 import math
+
+from heilung.models import actions
+
 from .h_utils import compute_pathogen_importance
 
 
@@ -305,8 +307,8 @@ class Gameplan:
         :return: Action object
         """
         tmp_var_developing, tmp_var_developed, tmp_var_developing_or_developed, \
-        tmp_developed_state_dict, tmp_overall_state_dict, \
-        tmp_every_pat_has_dev, tmp_any_pat_has_ava = self.get_pat_state()
+            tmp_developed_state_dict, tmp_overall_state_dict, \
+            tmp_every_pat_has_dev, tmp_any_pat_has_ava = self.get_pat_state()
 
         # If for every pathogen something is developing and nothing is already developed
         if tmp_every_pat_has_dev and not tmp_any_pat_has_ava:
@@ -460,7 +462,7 @@ class Gameplan:
             tmp_any_pat_has_ava = tmp_any_pat_has_ava or developed_state
 
         return tmp_var_developing, tmp_var_developed, tmp_var_developing_or_developed, \
-               tmp_developed_state_dict, tmp_overall_state_dict, tmp_every_pat_has_dev, tmp_any_pat_has_ava
+            tmp_developed_state_dict, tmp_overall_state_dict, tmp_every_pat_has_dev, tmp_any_pat_has_ava
 
     @staticmethod
     def get_action_for_mobile_city(city, points_to_spend):

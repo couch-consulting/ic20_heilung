@@ -1,6 +1,12 @@
 from typing import List
 
-from . import *
+from . import (AirportClosed, AntiVaccinationism, BioTerrorism,
+               CampaignLaunched, ConnectionClosed, EconomicCrisis,
+               ElectionsCalled, HygienicMeasuresApplied, InfluenceExerted,
+               LargeScalePanic, MedicationAvailable, MedicationDeployed,
+               MedicationInDevelopment, Outbreak, PathogenEncountered,
+               Quarantine, Uprising, VaccineAvailable, VaccineDeployed,
+               VaccineInDevelopment)
 
 eventMap = {
     'airportClosed': AirportClosed,

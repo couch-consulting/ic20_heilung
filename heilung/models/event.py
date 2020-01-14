@@ -3,9 +3,12 @@ class Event:
     """
 
     def __init__(self, event_type, since_round):
-        """
-        :param event_type: type of event
-        :param since_round: Number of round in which the event occurred
+        """Root class for events
+        Should be extended by subclasses
+
+        Arguments:
+            event_type {str} -- Name of the event (should be according to the game)
+            since_round {int} -- Round the event first occured in.
         """
         self.type = event_type
         self.sinceRound = since_round

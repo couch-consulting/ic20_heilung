@@ -6,6 +6,8 @@ class EndRound(Action):
     """
 
     def __init__(self):
+        """Generate an endRound Action object
+        """
         action_type = "endRound"
         parameters = {}
         super().__init__(action_type, self.get_costs(), parameters)

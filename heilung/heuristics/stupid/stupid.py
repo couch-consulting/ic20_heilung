@@ -1,6 +1,8 @@
 from typing import List, Tuple
 
 from heilung.models import actions, events
+from heilung.models.action import Action
+from heilung.models.game import Game
 from heilung.models.pathogen import Pathogen
 
 
@@ -36,11 +38,11 @@ class StupidHeuristic:
         'city_eligibility': 1,
     }
 
-    def __init__(self, game: 'Game'):
+    def __init__(self, game: Game):
         """Initialize heuristic with important data
 
         Arguments:
-            game {Game} -- Game object
+            game {Game} -- Gamestate object
         """
         self.game = game
         self.action_list = list()
@@ -57,9 +59,8 @@ class StupidHeuristic:
             if actions.PutUnderQuarantine.is_possible(self.game, 2, city):
                 return [actions.PutUnderQuarantine(city, 2)]
 
-        if self.game.round > 1 and self.game.points <=20:
+        if self.game.round > 1 and self.game.points <= 20:
             return [actions.EndRound()]
-
 
         # Add an EndRound action, so action_list will never be empty
         # TODO: Rethink rank
@@ -79,17 +80,28 @@ class StupidHeuristic:
         return [ranked_action[1] for ranked_action in self.action_list]
 
     def rank_pathogen(self, pathogen: Pathogen, prevalence: float) -> float:
+        """Ranks pathogens according to the internal priorization
+
+        Arguments:
+            pathogen {Pathogen} -- Pathogen object to rank
+            prevalence {float} -- Percentage of currently infected people
+
+        Returns:
+            float -- Importance value for this pathogen
+        """
         weights = self.weights['pathogen']
         rank = weights['global'] * (
-                (weights['prevalence'] * prevalence) +
-                (weights['lethality'] * pathogen.lethality) +
-                (weights['infectivity'] * pathogen.infectivity) +
-                (weights['duration'] * pathogen.duration) +
-                (weights['mobility'] * pathogen.mobility))
-        # print(f'{pathogen.name}: {rank}')
+            (weights['prevalence'] * prevalence) +
+            (weights['lethality'] * pathogen.lethality) +
+            (weights['infectivity'] * pathogen.infectivity) +
+            (weights['duration'] * pathogen.duration) +
+            (weights['mobility'] * pathogen.mobility))
         return rank
 
     def evaluate_pathogens(self):
+        """Top level internal evaluation function
+        First tries to evaluate treatmen methods, before looking for isolation options.
+        """
         pathogens = self.game.pat_state_dict
         weights = self.weights['treatment']
 
@@ -145,8 +157,15 @@ class StupidHeuristic:
             if action.is_possible(self.game, pathogen):
                 self.action_list.append((rank, action))
 
+    def decide_vacc_or_med(self, pathogen: Pathogen) -> Action:
+        """Applies a decision tree to make a decision whether to develop a vaccine or medcine
 
-    def decide_vacc_or_med(self, pathogen: Pathogen) -> 'Action':
+        Arguments:
+            pathogen {Pathogen} -- Pathogen Object to develop something against
+
+        Returns:
+            Action -- The final development action
+        """
         # High infectivity
         if pathogen.infectivity >= 0.5:
             if pathogen.lethality >= 0.5:
@@ -162,7 +181,14 @@ class StupidHeuristic:
             return actions.DevelopVaccine(pathogen)
 
     def get_eligible_cities(self, pathogen_name: str) -> Tuple[List['City'], 'City']:
-        """Get Cities with a pathogen and the largest one
+        """Get all cities with a named pathogen.
+        To make evaluation easier also directly return the largest city
+
+        Arguments:
+            pathogen_name {str}  -- Name pf the pathogen to search
+
+        Returns:
+            Tuple[List['City'], 'City'] -- A list of cities with the pathogen and the largest of these cities.
         """
         eligible_cities = self.game.cities_with_pathogen[pathogen_name]
 
@@ -187,7 +213,7 @@ class StupidHeuristic:
             rank *= self.weights['city_eligibility']
             if kind == 'medication':
                 action = (rank, actions.DeployMedication(city,
-                city.outbreak.pathogen))
+                                                         city.outbreak.pathogen))
             else:
                 if city.has_event(events.AntiVaccinationism):
                     # Do not vaccinate in cities with AntiVaccinationism
@@ -195,14 +221,14 @@ class StupidHeuristic:
                 if pathogen in city.deployed_vaccines:
                     continue
                 action = (rank, actions.DeployVaccine(city,
-                city.outbreak.pathogen))
+                                                      city.outbreak.pathogen))
             self.action_list.append(action)
 
     def isolate_cities(self, pathogen: 'Pathogen'):
         """Generate isolation events if applicable
 
         Arguments:
-            pathogen {Pathogen} -- [description]
+            pathogen {Pathogen} -- Pathogen to generate isolation events for
         """
         if len(self.game.get_cities_with_pathogen(pathogen)) > 1:
             # Virus has already spread. Pointless to isolate
@@ -214,10 +240,10 @@ class StupidHeuristic:
             weights = self.weights['isolation']
 
             rank = weights['global'] * (
-                    (weights['prevalence'] * (city.outbreak.prevalence * city.population)/largest_city.population) *
-                    (weights['lethality'] * pathogen.lethality) *
-                    (weights['mobility'] * pathogen.mobility) *
-                    (weights['infectivity'] * pathogen.infectivity))
+                (weights['prevalence'] * (city.outbreak.prevalence * city.population)/largest_city.population) *
+                (weights['lethality'] * pathogen.lethality) *
+                (weights['mobility'] * pathogen.mobility) *
+                (weights['infectivity'] * pathogen.infectivity))
 
             quarantine_rounds = actions.PutUnderQuarantine.get_max_rounds(self.game.points)
 

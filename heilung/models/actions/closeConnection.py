@@ -6,10 +6,18 @@ class CloseConnection(Action):
     """
 
     def __init__(self, from_city, to_city, num_rounds, possible_from_cities=None):
-        """
-        :param from_city: City object
-        :param to_city: City object
-        :param num_rounds: number of rounds to quarantine the city as a positive integer greater than 0
+        """Generates on object of this action
+
+        Arguments:
+            from_city {City} -- [description]
+            to_city {City} -- [description]
+            num_rounds {int} -- number of rounds to quarantine the city as a positive integer greater than 0
+
+        Keyword Arguments:
+            possible_cities {List[City]} -- List of possible cities to evaluate this event for (default: {None})
+
+        Raises:
+            ValueError: num_rounds must be larger than 0
         """
         if possible_from_cities is None:
             self.possible_from_cities = []

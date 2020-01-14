@@ -1,9 +1,12 @@
-# Action Builder Class - Responsible for creating an output/answer
-from heilung.models.actions import EndRound, ApplyHygienicMeasures, ExertInfluence, LaunchCampaign, CallElections, \
-    PutUnderQuarantine, CloseAirport, CloseConnection, DevelopVaccine, DeployVaccine, DevelopMedication, \
-    DeployMedication
-from heilung.models.city import City
 import random
+
+from heilung.models.actions import (ApplyHygienicMeasures, CallElections,
+                                    CloseAirport, CloseConnection,
+                                    DeployMedication, DeployVaccine,
+                                    DevelopMedication, DevelopVaccine,
+                                    EndRound, ExertInfluence, LaunchCampaign,
+                                    PutUnderQuarantine)
+from heilung.models.city import City
 
 
 class ActionBuilder:
@@ -37,42 +40,54 @@ class ActionBuilder:
         if ava_points >= DeployVaccine.get_costs():
             # Can be deployed as long as a city has an outbreak and uninfected citizens are not immune
             # vaccines could be deployed multiple times but this does not affect anything thus is filtered
-            potential_pathogen = self.game.get_relevant_pathogens(self.game.pathogens_with_vaccine)
+            potential_pathogen = self.game.get_relevant_pathogens(
+                self.game.pathogens_with_vaccine)
             for pathogen in potential_pathogen:
                 # Cities that have the outbreak pathogen but do not have the vaccine deployed already
                 possible_cities = [city for city in self.game.get_cities_with_pathogen(pathogen) if
                                    pathogen not in city.deployed_vaccines]
                 # if no cities are possible then this is also not a possible action
                 if possible_cities:
-                    action_list.append(DeployVaccine(default_city, pathogen, possible_cities))
+                    action_list.append(DeployVaccine(
+                        default_city, pathogen, possible_cities))
 
         # Get Possible DeployMedication Actions which are still relevant
         if ava_points >= DeployMedication.get_costs():
             # Can be deployed as long as a city has infected citizens (medication can be deployed multiple times)
-            potential_pathogen = self.game.get_relevant_pathogens(self.game.pathogens_with_medication)
+            potential_pathogen = self.game.get_relevant_pathogens(
+                self.game.pathogens_with_medication)
             for pathogen in potential_pathogen:
                 # if the outbreak/pathogen is gone the prevalence is 0 <==> if the prevalence is 0 the outbreak is gone.
                 # Thus only need to check for cities with an outbreak of the given pathogen
-                possible_cities = [city for city in self.game.get_cities_with_pathogen(pathogen)]
+                possible_cities = [
+                    city for city in self.game.get_cities_with_pathogen(pathogen)]
                 if possible_cities:
-                    action_list.append(DeployMedication(default_city, pathogen, possible_cities=possible_cities))
+                    action_list.append(DeployMedication(
+                        default_city, pathogen, possible_cities=possible_cities))
 
         # Written like this in case costs of any of these would change, alternative they could all use the "same" if
         # Every city is possible
         all_cities = self.game.cities_list
         if ava_points >= ApplyHygienicMeasures.get_costs():
-            action_list.append(ApplyHygienicMeasures(default_city, possible_cities=all_cities))
+            action_list.append(ApplyHygienicMeasures(
+                default_city, possible_cities=all_cities))
         if ava_points >= CallElections.get_costs():
-            action_list.append(CallElections(default_city, possible_cities=all_cities))
+            action_list.append(CallElections(
+                default_city, possible_cities=all_cities))
         if ava_points >= ExertInfluence.get_costs():
-            action_list.append(ExertInfluence(default_city, possible_cities=all_cities))
+            action_list.append(ExertInfluence(
+                default_city, possible_cities=all_cities))
         if ava_points >= LaunchCampaign.get_costs():
-            action_list.append(LaunchCampaign(default_city, possible_cities=all_cities))
+            action_list.append(LaunchCampaign(
+                default_city, possible_cities=all_cities))
 
         # All cities with an outbreak
-        possible_cities = self.game.cities_infected
+        possible_cities = self.game.infected_cities
         # All cities with an outbreak that have an airport
-        alt_pos_cities = [city for city in possible_cities if city not in self.game.cities_without_airport]
+        cities_without_airport = [
+            city for city in self.game.cities.values() if not city.connections]
+        alt_pos_cities = [
+            city for city in possible_cities if city not in cities_without_airport]
 
         # num_rounds will default to maximum of rounds for available points
         if ava_points >= PutUnderQuarantine.get_costs(1) and possible_cities:
@@ -105,21 +120,27 @@ class ActionBuilder:
         action = random.choice(action_list)
 
         if isinstance(action, (DeployVaccine, DeployMedication)):
-            action.parameters['city'] = random.choice(action.possible_cities).name
+            action.parameters['city'] = random.choice(
+                action.possible_cities).name
         if isinstance(action, (ApplyHygienicMeasures, CallElections, ExertInfluence, LaunchCampaign)):
-            action.parameters['city'] = random.choice(action.possible_cities).name
+            action.parameters['city'] = random.choice(
+                action.possible_cities).name
 
         # No backtracking, due to the idea that it is possible by randomness to take another action
         # Further, go with random number of rounds between min and max
         if isinstance(action, (PutUnderQuarantine, CloseAirport)):
-            action.parameters['city'] = random.choice(action.possible_cities).name
-            action.parameters['rounds'] = random.randint(1, action.parameters['rounds'])
+            action.parameters['city'] = random.choice(
+                action.possible_cities).name
+            action.parameters['rounds'] = random.randint(
+                1, action.parameters['rounds'])
         if isinstance(action, CloseConnection):
             from_city = random.choice(action.possible_from_cities)
             action.parameters['fromCity'] = from_city.name
             # select random to connection
-            action.parameters['toCity'] = random.choice(action.connections_from_city[from_city.name])
-            action.parameters['rounds'] = random.randint(1, action.parameters['rounds'])
+            action.parameters['toCity'] = random.choice(
+                action.connections_from_city[from_city.name])
+            action.parameters['rounds'] = random.randint(
+                1, action.parameters['rounds'])
 
         return action
 

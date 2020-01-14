@@ -7,8 +7,6 @@ import time
 
 import requests
 
-from server import app
-
 
 def client(won_games, avg_rounds_win, avg_rounds_loss, base_url, seed, version='human'):
     requests.post(base_url + '/seed/' + seed)
@@ -18,9 +16,9 @@ def client(won_games, avg_rounds_win, avg_rounds_loss, base_url, seed, version='
         os.remove(observer_path)
 
     # Play game
-    client = subprocess.Popen([args.client_path, '-u', base_url + '/', '-s', seed],
+    cli_client = subprocess.Popen([args.client_path, '-u', base_url + '/', '-s', seed],
                               stdout=subprocess.DEVNULL)
-    client.wait()
+    cli_client.wait()
 
     # Collect result
     results = requests.get(base_url + '/last_state').json()

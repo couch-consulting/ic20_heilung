@@ -7,10 +7,12 @@ class Outbreak(Event):
     """
 
     def __init__(self, pathogen, sinceRound, prevalence):
-        """
-        :param pathogen: Pathogen Object
-        :param sinceRound: Number of Round in which the outbreak started
-        :param prevalence: % as float between 0 and 1, % of infected citizens in the city
+        """Creates a new object
+
+        Arguments:
+            pathogen {Pathogen} -- Pathogen Object
+            sinceRound {int} -- Number of Round in which the outbreak started
+            prevalence {float} -- Fraction as float between 0 and 1, % of infected citizens in the city
         """
         self.pathogen = Pathogen.from_dict(pathogen)
         self.prevalence = prevalence

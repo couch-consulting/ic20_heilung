@@ -1,8 +1,20 @@
+from heilung.models import Action, Game
+
 from ..human import human
 from ..stupid import StupidHeuristic
 
 
-def same(action_1, action_2):
+def same(action_1: Action, action_2: Action) -> bool:
+    """Evaluates two actions whether they are the same
+    Also includes options such as city and and treated pathogen
+
+    Arguments:
+        action_1 {Action} -- Action A to compare
+        action_2 {Action} -- Action B to compare
+
+    Returns:
+        bool -- Are they the same
+    """
     if action_1 and action_2 and action_1.type == action_2.type:
         if action_1.type == 'endRound':
             return True
@@ -18,12 +30,15 @@ def same(action_1, action_2):
 
 
 def compute_combined_rank(rl_1, rl_2):
-    """
-    For two given lists, calculates the rank of every action in response list 1 by increasing the action rank if it is also in response list 2
-    Inputs list are stored such that the first element is most important
-    :param rl_1: List of action which shall be increased
-    :param rl_2: List of action which are used to increase the rank
-    :return: List of tuples of actions with a rank List[(Action, int)]
+    """[For two given lists, calculates the rank of every action in response list 1 by  increasing the action rank if it is also in response list 2
+     Inputs list are stored such that the first element is most important]
+
+    Arguments:
+        rl_1 {List[Action]} -- List of action which shall be increased
+        rl_2 {List[Action]} -- List of action which are used to increase the rank
+
+    Returns:
+        List[Tuple[Action, int]] -- List of tuples of actions with a rank
     """
     new_action_rank_list = []
     for indx_1, tmp_action_1, in enumerate(rl_1, start=1):
@@ -39,14 +54,15 @@ def compute_combined_rank(rl_1, rl_2):
 
 
 def merge_lists(rl_1, rl_2):
-    """
-    Merges lists of actions such that if an action is in both lists, the higher rank is inserted with that action
-    and only unique entries are present
-    :param rl_1: List[(Action, int)]
-    :param rl_2: List[(Action, int)]
-    :return: List[(Action, int)]
-    """
+    """ Merges lists of actions such that if an action is in both lists, the higher rank is inserted with that action and only unique entries are present
 
+    Arguments:
+        rl_1 {List[Tuple[Action, int]]} -- Ranked list of actions
+        rl_2 {List[Tuple[Action, int]]} -- [description]
+
+    Returns:
+        List[Tuple[Action, int]] -- Merged list
+    """
     for (action, rank) in rl_1:
         no_similar_exists = True
         for indx, (tmp_action, tmp_rank) in enumerate(rl_2):
@@ -64,7 +80,15 @@ def merge_lists(rl_1, rl_2):
     return rl_2
 
 
-def get_decision(game: 'Game'):
+def get_decision(game: Game) -> Action:
+    """Implements the heuristic interface taking the gamestate
+
+    Arguments:
+        game {Game} -- Current state of the game
+
+    Returns:
+        Action -- Action to execute
+    """
     stupid = StupidHeuristic(game)
     stupid_rl = stupid.get_decision()
     human_rl = human.get_decision(game)

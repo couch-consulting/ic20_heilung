@@ -1,5 +1,3 @@
-from typing import List
-
 GRADE_MAPPING = {
     '--': 0,
     '-': 0.25,
@@ -16,7 +14,7 @@ def grade_to_scalar(grade: str) -> float:
         grade {str} -- The grade from the request
 
     Returns:
-        int -- An integer representation
+        float -- The value scaled between 0 and 1
     """
     # Catch empty string used for 'empty_city'
     if grade == '':
