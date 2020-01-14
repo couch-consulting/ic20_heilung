@@ -352,12 +352,6 @@ class Gameplan:
             return [(self.plan_global_action(action, ava_points), rank)
                     for (action, rank) in filtered_global_actions]
 
-        # if self.game.last_development_finished_since >= len(self.game.pathogens_in_cities)*2:
-        # if self.game.last_development_finished_since >= 1:
-        # if self.game.last_development_finished_since >= 3:
-        # if self.game.last_development_finished_since >= 6:
-        # 5
-
         if self.game.last_development_finished_since >= 3:
             # TODO: Possible improvement: extend features to use for dynamic max and create exceptions
             return [(self.plan_global_action(action, ava_points), rank)
