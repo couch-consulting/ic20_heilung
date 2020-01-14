@@ -1,0 +1,637 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.heuristics.human.stateheuristic &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.heuristics.human.stateheuristic</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">h_utils</span>
+<span class="kn">from</span> <span class="nn">.scalegroup</span> <span class="kn">import</span> <span class="n">Scalegroup</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">scalegroup</span>
+<span class="kn">from</span> <span class="nn">heilung.models</span> <span class="kn">import</span> <span class="n">actions</span><span class="p">,</span> <span class="n">events</span>
+<span class="kn">from</span> <span class="nn">heilung.models.pathogen</span> <span class="kn">import</span> <span class="n">Pathogen</span>
+
+
+<div class="viewcode-block" id="Stateheuristic"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic">[docs]</a><span class="k">class</span> <span class="nc">Stateheuristic</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Heuristic for the current game state for the human heuristic</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">game</span> <span class="o">=</span> <span class="n">game</span>
+
+        <span class="c1"># Get all pathogens which are relevant</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relevant_pathogens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_in_cities</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relevant_pathogens_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">pat</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">pat</span> <span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_pathogens</span><span class="p">}</span>
+        <span class="c1"># Weigh relevant pathogens and store in a dict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reweigh_pathogens</span><span class="p">()</span>
+        <span class="c1"># Reweigh the pathogen for each city they are in</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">city_weighted_pathogens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reweigh_pathogen_for_city</span><span class="p">()</span>
+        <span class="c1"># Store for a feature that is needed later</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dev_needed</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Global Action Heuristic</span>
+<div class="viewcode-block" id="Stateheuristic.rank_global_actions"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.rank_global_actions">[docs]</a>    <span class="k">def</span> <span class="nf">rank_global_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Ranks global actions (develop-actions for each pathogen)</span>
+<span class="sd">        :return: List of Tuples of actions ready to be build and their rank</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize scale group for all pathogens</span>
+        <span class="n">global_action_scale</span> <span class="o">=</span> <span class="n">scalegroup</span><span class="o">.</span><span class="n">init_global_action_sg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_pathogens_dict</span><span class="p">)</span>
+
+        <span class="c1"># Scale values</span>
+        <span class="k">for</span> <span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="n">rank</span> <span class="ow">in</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">sg</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">name_ending</span> <span class="o">=</span> <span class="n">adapted_pathogen_name</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span>
+            <span class="n">pathogen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_pathogens_dict</span><span class="p">[</span><span class="n">adapted_pathogen_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]]</span>
+
+            <span class="c1"># Features</span>
+            <span class="n">medication_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_with_medication</span>
+                                <span class="ow">and</span> <span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens__with_developing_medication</span><span class="p">)</span>
+            <span class="n">vaccine_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_with_vaccine</span>
+                             <span class="ow">and</span> <span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens__with_developing_vaccine</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">name_ending</span> <span class="o">==</span> <span class="s1">&#39;_dV&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">vaccine_state</span><span class="p">:</span>
+                    <span class="c1"># vaccine importance</span>
+
+                    <span class="c1"># The longer the duration the more important</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+                    <span class="c1"># The less lethal the more important</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span><span class="p">)</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                    <span class="c1"># TODO adapt below</span>
+                    <span class="c1"># More important the higher or the lower it is but not really in between thus formula: 4(x-0.5)^2</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span>
+                                                               <span class="nb">max</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                    <span class="c1"># The less infective the more important</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span><span class="p">)</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span>
+                                                               <span class="nb">int</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_in_cities</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span>
+                                                                   <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="n">adapted_pathogen_name</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">medication_state</span><span class="p">:</span>
+                    <span class="c1"># medication importance:</span>
+
+                    <span class="c1"># The shorter the duration of the pathogen the more important</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+                    <span class="c1"># The more lethal the more important</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+
+                    <span class="c1"># TODO below</span>
+                    <span class="c1"># The less mobile the pathogen, the more important</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span>
+                                                               <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span><span class="p">)</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                    <span class="c1"># The more infective the more important</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span>
+                                                               <span class="o">*</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">global_action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="n">adapted_pathogen_name</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalize_global_actions</span><span class="p">(</span><span class="n">global_action_scale</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Stateheuristic.finalize_global_actions"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.finalize_global_actions">[docs]</a>    <span class="k">def</span> <span class="nf">finalize_global_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_action_scale</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Makes a scalegroup of global actions build ready</span>
+<span class="sd">        :param global_action_scale: created by rank global actions</span>
+<span class="sd">        :return: List of Tuples of actions ready to be build and their rank</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Build actions</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">global_action_scale</span><span class="o">.</span><span class="n">rescale</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">adapted_pathogen_name</span><span class="p">,</span> <span class="n">rank</span> <span class="ow">in</span> <span class="n">global_action_scale</span><span class="o">.</span><span class="n">sg</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">name_ending</span> <span class="o">=</span> <span class="n">adapted_pathogen_name</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span>
+            <span class="n">pathogen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_pathogens_dict</span><span class="p">[</span><span class="n">adapted_pathogen_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]]</span>
+
+            <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">name_ending</span> <span class="o">==</span> <span class="s1">&#39;_dV&#39;</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">DevelopVaccine</span><span class="p">(</span><span class="n">pathogen</span><span class="p">),</span> <span class="n">rank</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">DevelopMedication</span><span class="p">(</span><span class="n">pathogen</span><span class="p">),</span> <span class="n">rank</span><span class="p">))</span>
+
+        <span class="c1"># Sort results</span>
+        <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    <span class="c1"># City Specific Actions Heuristic</span>
+<div class="viewcode-block" id="Stateheuristic.rank_actions_for_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.rank_actions_for_cities">[docs]</a>    <span class="k">def</span> <span class="nf">rank_actions_for_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Builds a ranked list of all possible actions</span>
+<span class="sd">        :return: {city_name: (action, rank), ...}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">action_ranks_per_city</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">cities_list</span><span class="p">:</span>
+            <span class="n">city_name</span> <span class="o">=</span> <span class="n">city</span><span class="o">.</span><span class="n">name</span>
+
+            <span class="c1"># Get rank of each action</span>
+            <span class="n">action_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank_actions_of_city</span><span class="p">(</span><span class="n">city</span><span class="p">)</span>
+
+            <span class="c1"># Make build ready</span>
+            <span class="n">build_ready_actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalize_actions_of_city</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">)</span>
+
+            <span class="c1"># Add to dict</span>
+            <span class="n">action_ranks_per_city</span><span class="p">[</span><span class="n">city_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">build_ready_actions</span>
+
+        <span class="k">return</span> <span class="n">action_ranks_per_city</span></div>
+
+<div class="viewcode-block" id="Stateheuristic.rank_actions_of_city"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.rank_actions_of_city">[docs]</a>    <span class="k">def</span> <span class="nf">rank_actions_of_city</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">city</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns each possible (without regard to available points) action with a rank</span>
+<span class="sd">        :param city: city object</span>
+<span class="sd">        :return: scale group object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Action scale group</span>
+        <span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;reduce_city_mob&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;exert_influence&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;apply_hyg_msr&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;call_elections&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s1">&#39;launch_campaign&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;deploy_medication&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+        <span class="n">action_scale</span> <span class="o">=</span> <span class="n">Scalegroup</span><span class="p">(</span><span class="n">tmp_dict</span><span class="p">)</span>
+
+        <span class="c1"># Pathogen/outbreak rank influence</span>
+        <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="p">:</span>
+            <span class="c1"># Collect pathogen values</span>
+            <span class="n">pathogen</span> <span class="o">=</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span>
+
+            <span class="c1"># Collect features</span>
+            <span class="n">outbreak_lifetime</span> <span class="o">=</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">since_round_percentage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">round</span><span class="p">,</span> <span class="n">city</span><span class="p">)</span>  <span class="c1"># The higher the older</span>
+            <span class="n">compared_pop</span> <span class="o">=</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">compute_percentage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">biggest_city</span><span class="o">.</span><span class="n">population</span><span class="p">,</span> <span class="n">city</span><span class="o">.</span><span class="n">population</span><span class="p">)</span>
+            <span class="n">anti_vac</span> <span class="o">=</span> <span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">AntiVaccinationism</span><span class="p">)</span>
+            <span class="n">dep_meds</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">deployed_medication</span><span class="p">)</span>
+            <span class="n">med_state</span> <span class="o">=</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_with_medication</span>
+            <span class="n">vac_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_with_vaccine</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">deployed_vaccines</span>
+
+            <span class="c1"># Weigh city mobility - is only relevant when outbreak exists</span>
+            <span class="c1"># The more mobile the pathogen the more important to reduce its mobility</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;reduce_city_mob&#39;</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="c1"># The shorter the duration of the pathogen the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;reduce_city_mob&#39;</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="c1"># The lower the population the more important to reduce city mobility</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;reduce_city_mob&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">compared_pop</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="c1"># The older the pathogen the less important to reduce its mobility</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;reduce_city_mob&#39;</span><span class="p">,</span> <span class="n">outbreak_lifetime</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+
+            <span class="c1"># TODO: Possible new feature - average prevalence of neighbors and what pathogen they have</span>
+
+            <span class="c1"># Weigh Vaccine</span>
+            <span class="c1"># The more mobile the pathogen, the more important to deploy the vaccine</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="c1"># The longer the duration the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="c1"># The less lethal the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="c1"># The more infective the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">,</span>
+                                                <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+            <span class="c1"># If no anti vacs in city, more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="ow">not</span> <span class="n">anti_vac</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+            <span class="c1"># If med already deployed in city, more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">dep_meds</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+            <span class="c1"># Increase if low prev</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+
+            <span class="c1"># Medication Ranking</span>
+            <span class="c1"># The less mobile the pathogen, the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="c1"># The shorter the duration of the pathogen the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="c1"># The more lethal the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">,</span>
+                                                <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="c1"># The less infective the more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+            <span class="c1"># If anti vacs in city, more important</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">anti_vac</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+            <span class="c1"># For each time medication was already deployed, reduce importance (hard cap 5 times in one city)</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">,</span>
+                                                <span class="nb">len</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">deployed_medication</span><span class="p">)</span> <span class="o">/</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="c1"># Increase if high prev</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">,</span>
+                                                <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="n">tmp_val</span> <span class="o">=</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">vac_state</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">]:</span>
+                    <span class="c1"># Counts how often vaccine was needed but not developed</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dev_needed</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dev_needed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+                <span class="c1"># In case the vaccine is not yet developed</span>
+                <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">med_state</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">tmp_val</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">dev_needed</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dev_needed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+                <span class="c1"># In case the medication is not yet developed</span>
+                <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># 3-er Actions rank influences</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;exert_influence&#39;</span><span class="p">,</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">EconomicCrisis</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;exert_influence&#39;</span><span class="p">,</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">InfluenceExerted</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;exert_influence&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">city</span><span class="o">.</span><span class="n">economy</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;call_elections&#39;</span><span class="p">,</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">LargeScalePanic</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;call_elections&#39;</span><span class="p">,</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">Uprising</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;call_elections&#39;</span><span class="p">,</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">ElectionsCalled</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;call_elections&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">city</span><span class="o">.</span><span class="n">government</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;launch_campaign&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">city</span><span class="o">.</span><span class="n">awareness</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+        <span class="c1"># higher decrease because event makes it to higher categorical value by default</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;launch_campaign&#39;</span><span class="p">,</span>
+                                            <span class="nb">int</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">CampaignLaunched</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;apply_hyg_msr&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">AntiVaccinationism</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+        <span class="c1"># higher decrease because event makes it to higher categorical value by default</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;apply_hyg_msr&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">HygienicMeasuresApplied</span><span class="p">))</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;apply_hyg_msr&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">city</span><span class="o">.</span><span class="n">hygiene</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="p">:</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;apply_hyg_msr&#39;</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+            <span class="n">action_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;apply_hyg_msr&#39;</span><span class="p">,</span>
+                                                <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span> <span class="o">*</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+        <span class="c1"># Rank actual mobility actions and readjust (e.g. check if possible) based on game state</span>
+        <span class="c1"># Further, 3er action need no adjustment - all are possible - and medication/vaccine already done above</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">readjust_mobility_actions</span><span class="p">(</span><span class="n">action_scale</span><span class="p">,</span> <span class="n">city</span><span class="p">)</span>  <span class="c1"># adjusts action_scale object in place</span>
+
+        <span class="k">return</span> <span class="n">action_scale</span></div>
+
+<div class="viewcode-block" id="Stateheuristic.readjust_mobility_actions"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.readjust_mobility_actions">[docs]</a>    <span class="k">def</span> <span class="nf">readjust_mobility_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_scale</span><span class="p">,</span> <span class="n">city</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes importance for mobility actions (close_connection, close airport, put under quarantine)</span>
+<span class="sd">        and modifies action scale group in place</span>
+<span class="sd">        :param action_scale: action scale object</span>
+<span class="sd">        :param city: city object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Get scale of reduce city mob and decide depending on this scale for subactions of city mobility</span>
+        <span class="c1"># Get and remove reduce city mob</span>
+        <span class="n">reduce_mob_rank</span> <span class="o">=</span> <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;reduce_city_mob&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Bias</span>
+        <span class="n">close_connection</span> <span class="o">=</span> <span class="n">reduce_mob_rank</span> <span class="o">*</span> <span class="mf">0.5</span>
+        <span class="n">close_airport</span> <span class="o">=</span> <span class="n">reduce_mob_rank</span> <span class="o">*</span> <span class="mf">0.75</span>
+        <span class="n">put_under_quarantine</span> <span class="o">=</span> <span class="n">reduce_mob_rank</span>
+
+        <span class="c1"># Get rounds for actions - default to max since gameplan handles this</span>
+        <span class="n">close_connection_rounds</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">CloseConnection</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span><span class="p">)</span>
+        <span class="c1"># Max possible round number is 5 and 2 because for these numbers you can always repeat the action when its done</span>
+        <span class="n">close_airport_rounds</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">actions</span><span class="o">.</span><span class="n">CloseAirport</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span><span class="p">),</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">put_under_quarantine_rounds</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># Readjust in case of impossibility</span>
+        <span class="c1"># Check if connections exists</span>
+        <span class="n">sorted_connections</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+            <span class="c1"># Close connection heuristic for to_city (if connections exists, else set to zero)</span>
+            <span class="n">sorted_connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_connections_sorted_for_highest_population_first</span><span class="p">(</span><span class="n">city</span><span class="p">)</span>
+            <span class="n">to_city</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">cities</span><span class="p">[</span><span class="n">sorted_connections</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">close_connection</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">to_city</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Check if any action did already happen</span>
+        <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">under_quarantine</span><span class="p">:</span>
+            <span class="c1"># If city is under quarantine every mobility action becomes irrelevant</span>
+            <span class="n">close_connection</span> <span class="o">=</span> <span class="n">close_airport</span> <span class="o">=</span> <span class="n">put_under_quarantine</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="n">city</span><span class="o">.</span><span class="n">airport_closed</span><span class="p">:</span>
+            <span class="c1"># If airports are already closed closing anything further become 0 while quarantine just gets less important</span>
+            <span class="n">close_connection</span> <span class="o">=</span> <span class="n">close_airport</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">put_under_quarantine</span> <span class="o">=</span> <span class="n">put_under_quarantine</span> <span class="o">*</span> <span class="mf">0.6</span>
+        <span class="k">elif</span> <span class="n">city</span><span class="o">.</span><span class="n">closed_connections</span><span class="p">:</span>
+            <span class="n">tmp_counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">closed_con</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">closed_connections</span><span class="p">:</span>
+                <span class="c1"># For each closed connection reduce rank of others and remove from valid connection</span>
+                <span class="n">tmp_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">sorted_connections</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">closed_con</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">sorted_connections</span><span class="p">:</span>
+                <span class="n">to_city</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="c1"># if empty, no connection are available hence equal to airport closed</span>
+                <span class="n">close_connection</span> <span class="o">=</span> <span class="n">close_airport</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">put_under_quarantine</span> <span class="o">=</span> <span class="n">put_under_quarantine</span> <span class="o">*</span> <span class="mf">0.6</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">to_city</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">cities</span><span class="p">[</span><span class="n">sorted_connections</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="n">close_airport</span> <span class="o">=</span> <span class="n">close_airport</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">tmp_counter</span> <span class="o">*</span> <span class="mf">0.2</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">put_under_quarantine</span> <span class="o">-=</span> <span class="n">put_under_quarantine</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">tmp_counter</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Check if ava_points is enough for an action</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">actions</span><span class="o">.</span><span class="n">CloseConnection</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span><span class="p">):</span>
+            <span class="n">close_connection</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">actions</span><span class="o">.</span><span class="n">CloseAirport</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span><span class="p">):</span>
+            <span class="n">close_airport</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span><span class="p">):</span>
+            <span class="n">put_under_quarantine</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Add to scale group for rescale</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;close_connection&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">close_connection</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;close_airport&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">close_airport</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;put_under_quarantine&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">put_under_quarantine</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">rescale</span><span class="p">()</span>
+
+        <span class="c1"># Add fully to scale group</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;close_airport&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;close_airport&#39;</span><span class="p">],</span> <span class="n">close_airport_rounds</span><span class="p">)</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;put_under_quarantine&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;put_under_quarantine&#39;</span><span class="p">],</span> <span class="n">put_under_quarantine_rounds</span><span class="p">)</span>
+        <span class="c1"># TODO: Possible improvement: Add actions for closing any connection</span>
+        <span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;close_connection&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">action_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;close_connection&#39;</span><span class="p">],</span> <span class="n">close_connection_rounds</span><span class="p">,</span> <span class="n">to_city</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Stateheuristic.finalize_actions_of_city"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.finalize_actions_of_city">[docs]</a>    <span class="k">def</span> <span class="nf">finalize_actions_of_city</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">city</span><span class="p">,</span> <span class="n">rank_of_actions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Finalize a list of action which are ready to be build</span>
+<span class="sd">        :param city: city object</span>
+<span class="sd">        :param rank_of_actions: dict with name of action as key and importance percentage as value</span>
+<span class="sd">        :return: List of Tuples of actions ready to be build and their rank</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># List of ready-to-build actions</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">actions</span><span class="o">.</span><span class="n">DeployMedication</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;deploy_medication&#39;</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">DeployVaccine</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;deploy_vaccine&#39;</span><span class="p">]))</span>
+
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">ExertInfluence</span><span class="p">(</span><span class="n">city</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;exert_influence&#39;</span><span class="p">]))</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">ApplyHygienicMeasures</span><span class="p">(</span><span class="n">city</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;apply_hyg_msr&#39;</span><span class="p">]))</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">CallElections</span><span class="p">(</span><span class="n">city</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;call_elections&#39;</span><span class="p">]))</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">LaunchCampaign</span><span class="p">(</span><span class="n">city</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;launch_campaign&#39;</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;close_connection&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">num_rounds</span> <span class="o">=</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;close_connection&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">to_city</span> <span class="o">=</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;close_connection&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">CloseConnection</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">to_city</span><span class="p">,</span> <span class="n">num_rounds</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;close_connection&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;close_airport&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">num_rounds</span> <span class="o">=</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;close_airport&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">CloseAirport</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">num_rounds</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;close_airport&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;put_under_quarantine&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">num_rounds</span> <span class="o">=</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;put_under_quarantine&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">num_rounds</span><span class="p">),</span> <span class="n">rank_of_actions</span><span class="p">[</span><span class="s1">&#39;put_under_quarantine&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    <span class="c1"># City Heuristic</span>
+<div class="viewcode-block" id="Stateheuristic.rank_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.rank_cities">[docs]</a>    <span class="k">def</span> <span class="nf">rank_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a dict with the name of each city as a key and their importance in this heuristic as a value</span>
+<span class="sd">        :return: dict of importance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">importance_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Dict to store city specific pathogen weight</span>
+
+        <span class="c1"># Needed Game data</span>
+        <span class="n">biggest_city_pop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">biggest_city</span><span class="o">.</span><span class="n">population</span>
+        <span class="n">cities_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">cities_list</span>
+
+        <span class="c1"># Initialize scale group</span>
+        <span class="n">city_scale</span> <span class="o">=</span> <span class="n">scalegroup</span><span class="o">.</span><span class="n">init_city_sg</span><span class="p">(</span><span class="n">cities_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">city_weighted_pathogens</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">cities_list</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">city</span><span class="o">.</span><span class="n">name</span>
+
+            <span class="c1"># Get influence of outbreak</span>
+            <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="p">:</span>
+                <span class="c1"># The older the outbreak the more important the city to cure since deaths are closer</span>
+                <span class="n">city_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">since_round_percentage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">round</span><span class="p">,</span> <span class="n">city</span><span class="p">)</span>
+                                                  <span class="o">*</span> <span class="n">city_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                <span class="c1"># The higher the actually infected people in the city the more important the city</span>
+                <span class="n">compared_pop_infected_per</span> <span class="o">=</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">compute_percentage</span><span class="p">(</span><span class="n">biggest_city_pop</span><span class="p">,</span>
+                                                                       <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span> <span class="o">*</span> <span class="n">city</span><span class="o">.</span><span class="n">population</span><span class="p">)</span>
+                <span class="n">city_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">compared_pop_infected_per</span> <span class="o">*</span> <span class="n">city_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_with_medication</span> \
+                        <span class="ow">or</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_with_vaccine</span><span class="p">:</span>
+                    <span class="c1"># If medication or vaccine is available for this city, is shall become more important</span>
+                    <span class="n">city_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">city_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">city</span><span class="o">.</span><span class="n">deployed_vaccines</span><span class="p">:</span>
+                    <span class="c1"># When the city was yet not made immune it gets more important</span>
+                    <span class="n">city_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">city_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+            <span class="c1"># Influence of population (in contrast to population of the biggest (e.g. highest population) city)</span>
+            <span class="n">compared_pop_per</span> <span class="o">=</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">compute_percentage</span><span class="p">(</span><span class="n">biggest_city_pop</span><span class="p">,</span> <span class="n">city</span><span class="o">.</span><span class="n">population</span><span class="p">)</span>
+            <span class="n">city_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">compared_pop_per</span> <span class="o">*</span> <span class="n">city_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+            <span class="c1"># Increase importance if city had no help so far</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">[</span><span class="kc">True</span> <span class="k">for</span> <span class="n">event_object</span> <span class="ow">in</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">helpful_events_list</span><span class="p">()</span> <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">event_object</span><span class="p">)]:</span>
+                <span class="n">city_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">city_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+
+        <span class="c1"># Build dict</span>
+        <span class="n">city_scale</span><span class="o">.</span><span class="n">rescale</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">city_name</span><span class="p">,</span> <span class="n">importance_per</span> <span class="ow">in</span> <span class="n">city_scale</span><span class="o">.</span><span class="n">sg</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">importance_dict</span><span class="p">[</span><span class="n">city_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">importance_per</span>
+
+        <span class="k">return</span> <span class="n">importance_dict</span></div>
+
+    <span class="c1"># Pathogen Heuristic</span>
+<div class="viewcode-block" id="Stateheuristic.reweigh_pathogens"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.reweigh_pathogens">[docs]</a>    <span class="k">def</span> <span class="nf">reweigh_pathogens</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reweighs the properties of pathogens according to the game state</span>
+<span class="sd">        :return: dict of pathogen names associated to a reweighed pathogen object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_pathogens</span><span class="p">:</span>
+            <span class="n">pat_scale</span> <span class="o">=</span> <span class="n">Scalegroup</span><span class="p">({</span><span class="s1">&#39;lethality&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;infectivity&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                                    <span class="s1">&#39;mobility&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+
+            <span class="c1"># Apply base bias (lethality stays the same)</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">apply_bias</span><span class="p">(</span><span class="s1">&#39;infectivity&#39;</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">)</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">apply_bias</span><span class="p">(</span><span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">apply_bias</span><span class="p">(</span><span class="s1">&#39;mobility&#39;</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">)</span>
+
+            <span class="c1"># Collect Game Feature</span>
+            <span class="n">infected_citz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_percentage_of_infected</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="n">immune_citz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_percentage_of_immune</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="c1"># Influences</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;infectivity&#39;</span><span class="p">,</span> <span class="n">infected_citz</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;lethality&#39;</span><span class="p">,</span> <span class="n">infected_citz</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;infectivity&#39;</span><span class="p">,</span> <span class="n">immune_citz</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;mobility&#39;</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="c1"># Infectivity is more important the longer the duration</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;infectivity&#39;</span><span class="p">,</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+            <span class="c1"># The shorter the duration the more important is lethality</span>
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;lethality&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl3</span><span class="p">)</span>
+
+            <span class="n">pat_scale</span><span class="o">.</span><span class="n">rescale</span><span class="p">()</span>
+            <span class="n">tmp_dict</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">Pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">],</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;mobility&#39;</span><span class="p">],</span>
+                                               <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">],</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;lethality&#39;</span><span class="p">],</span>
+                                               <span class="n">transformation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">tmp_dict</span></div>
+
+<div class="viewcode-block" id="Stateheuristic.reweigh_pathogen_for_city"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.stateheuristic.Stateheuristic.reweigh_pathogen_for_city">[docs]</a>    <span class="k">def</span> <span class="nf">reweigh_pathogen_for_city</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reweighs properties of pathogens for the city in which they are</span>
+<span class="sd">        :return: city specific pathogen weights as dict whereby key is city name and value is pathogen object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">cities_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="p">:</span>
+                <span class="n">pathogen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">[</span><span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+
+                <span class="n">pat_scale</span> <span class="o">=</span> <span class="n">Scalegroup</span><span class="p">({</span><span class="s1">&#39;lethality&#39;</span><span class="p">:</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span><span class="p">,</span> <span class="s1">&#39;infectivity&#39;</span><span class="p">:</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span><span class="p">,</span>
+                                        <span class="s1">&#39;mobility&#39;</span><span class="p">:</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span><span class="p">})</span>
+                <span class="c1"># Collect city features</span>
+                <span class="n">anti_vac</span> <span class="o">=</span> <span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">AntiVaccinationism</span><span class="p">)</span>
+                <span class="n">vacc_dep</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">deployed_vaccines</span><span class="p">)</span>
+                <span class="n">med_dep</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">deployed_medication</span><span class="p">)</span>
+                <span class="n">city_hyg</span> <span class="o">=</span> <span class="n">city</span><span class="o">.</span><span class="n">hygiene</span>
+
+                <span class="c1"># The higher the more mobile</span>
+                <span class="n">city_mob</span> <span class="o">=</span> <span class="n">city</span><span class="o">.</span><span class="n">mobility</span>
+                <span class="c1"># The higher the longer the outbreak is alive</span>
+                <span class="n">outbreak_lifetime</span> <span class="o">=</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">since_round_percentage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">round</span><span class="p">,</span> <span class="n">city</span><span class="p">)</span>
+
+                <span class="c1"># If outbreak_lifetime exists longer then the duration becomes more important because kill is sooner</span>
+                <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="n">outbreak_lifetime</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+                <span class="c1"># Increase mobility of the city, increases mobility of the pathogen</span>
+                <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;mobility&#39;</span><span class="p">,</span> <span class="n">city_mob</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">vacc_dep</span><span class="p">:</span>
+                    <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">pat_scale</span><span class="o">.</span><span class="n">increase_on_dependency</span><span class="p">(</span><span class="s1">&#39;infectivity&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">anti_vac</span><span class="p">)</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl1</span><span class="p">)</span>
+                    <span class="n">pat_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;infectivity&#39;</span><span class="p">,</span> <span class="n">city_hyg</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+                    <span class="n">pat_scale</span><span class="o">.</span><span class="n">decrease_on_dependency</span><span class="p">(</span><span class="s1">&#39;infectivity&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">med_dep</span><span class="p">)</span> <span class="o">*</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">influence_lvl2</span><span class="p">)</span>
+
+                <span class="n">pat_scale</span><span class="o">.</span><span class="n">rescale</span><span class="p">()</span>
+
+                <span class="c1"># Add pathogen to dict</span>
+                <span class="n">tmp_dict</span><span class="p">[</span><span class="n">city</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">Pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">],</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;mobility&#39;</span><span class="p">],</span>
+                                               <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">],</span> <span class="n">pat_scale</span><span class="o">.</span><span class="n">sg</span><span class="p">[</span><span class="s1">&#39;lethality&#39;</span><span class="p">],</span>
+                                               <span class="n">transformation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">tmp_dict</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

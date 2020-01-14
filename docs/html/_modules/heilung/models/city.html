@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.models.city &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.models.city</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">heilung.models.events.event_utilities</span> <span class="kn">import</span> <span class="n">convert_events</span>
+<span class="kn">from</span> <span class="nn">heilung.utilities</span> <span class="kn">import</span> <span class="n">grade_to_scalar</span>
+
+
+<div class="viewcode-block" id="City"><a class="viewcode-back" href="../../../index.html#heilung.models.City">[docs]</a><span class="k">class</span> <span class="nc">City</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Basic City Object Modeling connections</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">,</span> <span class="n">population</span><span class="p">,</span>
+                 <span class="n">connections</span><span class="p">,</span> <span class="n">economy</span><span class="p">,</span> <span class="n">government</span><span class="p">,</span> <span class="n">hygiene</span><span class="p">,</span>
+                 <span class="n">awareness</span><span class="p">,</span> <span class="n">events</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Basic city object</span>
+<span class="sd">        constructor takes that many parameters to allow fluent transformation from input dict</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            name {str} -- Just the name</span>
+<span class="sd">            latitude {float} -- for Location of the city</span>
+<span class="sd">            longitude {float} -- for Location of the city</span>
+<span class="sd">            population {int} -- Number of inhabitants</span>
+<span class="sd">            connections {List[str]} -- List of city names connected to</span>
+<span class="sd">            economy {str} -- Textual ranking for this property</span>
+<span class="sd">            government {str} -- Textual ranking for this property</span>
+<span class="sd">            hygiene {str} -- Textual ranking for this property</span>
+<span class="sd">            awareness {str} -- Textual ranking for this property</span>
+<span class="sd">            events {List[dict]} -- List of events</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span> <span class="o">=</span> <span class="n">latitude</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">longitude</span> <span class="o">=</span> <span class="n">longitude</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="n">population</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connections</span> <span class="o">=</span> <span class="n">connections</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">economy</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">economy</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">government</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">government</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hygiene</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">hygiene</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">awareness</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">awareness</span><span class="p">)</span>
+
+        <span class="c1"># Event specific helpers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outbreak</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deployed_vaccines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deployed_medication</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">airport_closed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">under_quarantine</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">closed_connections</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">convert_events</span><span class="p">(</span><span class="n">events</span><span class="p">)</span>
+        <span class="c1"># Some shortcut vars which can be checked during building</span>
+
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;outbreak&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">outbreak</span> <span class="o">=</span> <span class="n">event</span>
+            <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;vaccineDeployed&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">deployed_vaccines</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">deployed_vaccines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;medicationDeployed&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">deployed_medication</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">deployed_medication</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;airportClosed&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">airport_closed</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;quarantine&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">under_quarantine</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;connectionClosed&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">closed_connections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">city</span><span class="p">)</span>
+
+<div class="viewcode-block" id="City.from_dict"><a class="viewcode-back" href="../../../index.html#heilung.models.City.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">city_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">city</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Converts a dict as sent from the client to a city object</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            city_name {str} -- Name as sent by the client</span>
+<span class="sd">            city {dict} -- Data Structure of a city as sent by the client</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">city_name</span><span class="p">,</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;latitude&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;longitude&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;population&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;connections&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;economy&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;government&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;hygiene&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="p">[</span><span class="s1">&#39;awareness&#39;</span><span class="p">],</span>
+            <span class="n">city</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;events&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">())</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="vm">__dict__</span>
+
+<div class="viewcode-block" id="City.has_event"><a class="viewcode-back" href="../../../index.html#heilung.models.City.has_event">[docs]</a>    <span class="k">def</span> <span class="nf">has_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check whether this city has a certain event</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            event_object {Event} -- Event to check</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool -- True or False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">event_object</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mobility</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the state of how mobile this city is (related to pathogen)</span>
+<span class="sd">        Returns mobility levels:</span>
+<span class="sd">        0. quarantined (or no nearby neighbors an airport closed [not implemented])</span>
+<span class="sd">        1/2. only land route to nearby neighbors (i.e. no airport or airport is closed)</span>
+<span class="sd">        1. airport open</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float -- value between 0 and 1 representing the mobility</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mobility_lvl</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Amount of connections</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">under_quarantine</span><span class="p">:</span>
+            <span class="n">num_of_con</span> <span class="o">=</span> <span class="nb">len</span><span class="p">([</span><span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">connections</span> <span class="k">if</span> <span class="n">city</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">closed_connections</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">num_of_con</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">airport_closed</span><span class="p">:</span>
+                <span class="n">mobility_lvl</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mobility_lvl</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">mobility_lvl</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">open_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get open connection of the city</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[str] -- List of strings with city names of connections that are still open</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">closed_connections</span><span class="p">)</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="p">))</span></div>
+
+<span class="c1"># TODO next below (test closeness theory with seed = 1)</span>
+<span class="c1"># Can an infection spread to a city nearby (location wise by coordinates) without them being connected via flightpath?</span>
+<span class="c1"># Assumption: yes</span>
+<span class="c1"># Result: Calculate if close airport/connection or putUnderQuarantie is best idea or if one is for sure cheaper than the others</span>
+<span class="c1"># Result: See closer cities as potential neighbors/connection for infections and make them more aware/hygienic</span>
+<span class="c1"># Possibly cities close to another can infect each other - support evidence: game state where 256 of 260 cities were infected but 16 do not even have an airport</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

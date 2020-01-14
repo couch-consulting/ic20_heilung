@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.models.pathogen &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.models.pathogen</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">heilung.utilities</span> <span class="kn">import</span> <span class="n">grade_to_scalar</span>
+
+
+<div class="viewcode-block" id="Pathogen"><a class="viewcode-back" href="../../../index.html#heilung.models.pathogen.Pathogen">[docs]</a><span class="k">class</span> <span class="nc">Pathogen</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A Pathogen</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">infectivity</span><span class="p">,</span> <span class="n">mobility</span><span class="p">,</span> <span class="n">duration</span><span class="p">,</span> <span class="n">lethality</span><span class="p">,</span> <span class="n">transformation</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pathogen object modelling the given input</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            name {str} -- Fictive name of the pathogen</span>
+<span class="sd">            infectivity {str} -- Textual representation for ranking - possibility to infect citizens of other cities or of the city with the outbreak</span>
+<span class="sd">            mobility {str} -- Textual representation for ranking - possibility of spread to not connected cities</span>
+<span class="sd">            duration {str} -- Textual representation for ranking - of rounds a citizen is infected who might infect others</span>
+<span class="sd">            lethality {str} -- Textual representation for ranking - of infected citizen dying</span>
+
+<span class="sd">        Keyword Arguments:</span>
+<span class="sd">            transformation {bool} -- Convert text to scalar values (default: {True})</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">transformation</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">infectivity</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">infectivity</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mobility</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">mobility</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">duration</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lethality</span> <span class="o">=</span> <span class="n">grade_to_scalar</span><span class="p">(</span><span class="n">lethality</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">infectivity</span> <span class="o">=</span> <span class="n">infectivity</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mobility</span> <span class="o">=</span> <span class="n">mobility</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">duration</span> <span class="o">=</span> <span class="n">duration</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lethality</span> <span class="o">=</span> <span class="n">lethality</span>
+
+<div class="viewcode-block" id="Pathogen.to_dict"><a class="viewcode-back" href="../../../index.html#heilung.models.pathogen.Pathogen.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return all values as dict</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict -- Represent this object as dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s1">&#39;infectivity&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">infectivity</span><span class="p">,</span>
+            <span class="s1">&#39;mobility&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mobility</span><span class="p">,</span>
+            <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span>
+            <span class="s1">&#39;lethality&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">lethality</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="Pathogen.from_dict"><a class="viewcode-back" href="../../../index.html#heilung.models.pathogen.Pathogen.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse dict object to pathogen object</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {dict} -- A pathogen dict as received in a request</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            [type] -- an instance of this class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">pathogen</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span>
+            <span class="n">pathogen</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">],</span>
+            <span class="n">pathogen</span><span class="p">[</span><span class="s1">&#39;mobility&#39;</span><span class="p">],</span>
+            <span class="n">pathogen</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">],</span>
+            <span class="n">pathogen</span><span class="p">[</span><span class="s1">&#39;lethality&#39;</span><span class="p">]</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="c1"># self.__dict__ == other.__dict__ changed to name due to possible changes in other property values</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">max_prop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">infectivity</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mobility</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lethality</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,349 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.heuristics.stupid.stupid &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.heuristics.stupid.stupid</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span> <span class="nn">heilung.models</span> <span class="kn">import</span> <span class="n">actions</span><span class="p">,</span> <span class="n">events</span>
+<span class="kn">from</span> <span class="nn">heilung.models.action</span> <span class="kn">import</span> <span class="n">Action</span>
+<span class="kn">from</span> <span class="nn">heilung.models.game</span> <span class="kn">import</span> <span class="n">Game</span>
+<span class="kn">from</span> <span class="nn">heilung.models.pathogen</span> <span class="kn">import</span> <span class="n">Pathogen</span>
+
+
+<div class="viewcode-block" id="StupidHeuristic"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic">[docs]</a><span class="k">class</span> <span class="nc">StupidHeuristic</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A stupid heuristic.</span>
+<span class="sd">    Nobody will survive.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;pathogen&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;global&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;prevalence&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;infectivity&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="s1">&#39;lethality&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+            <span class="s1">&#39;mobility&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;isolation&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;global&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;prevalence&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;infectivity&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;lethality&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;mobility&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;treatment&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;global&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;prevalence&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;infectivity&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;lethality&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s1">&#39;mobility&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;city_eligibility&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize heuristic with important data</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            game {Game} -- Gamestate object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">game</span> <span class="o">=</span> <span class="n">game</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+<div class="viewcode-block" id="StupidHeuristic.get_decision"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic.get_decision">[docs]</a>    <span class="k">def</span> <span class="nf">get_decision</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="s1">&#39;Action&#39;</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Top level interface for the heuristic to generate a decision</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()]</span>
+
+        <span class="c1"># Handle BioTerrorism Events with higher priority</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">has_new_bioTerrorism</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">city</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">has_new_bioTerrorism</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="o">.</span><span class="n">is_possible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">city</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">[</span><span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">round</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()]</span>
+
+        <span class="c1"># Add an EndRound action, so action_list will never be empty</span>
+        <span class="c1"># TODO: Rethink rank</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()))</span>
+
+        <span class="c1"># Focus on pathogens first</span>
+        <span class="c1"># This will populate the action list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_pathogens</span><span class="p">()</span>
+
+        <span class="c1"># Order action list descending by rank</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">action</span><span class="p">:</span> <span class="n">action</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Return just the action without rank</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">ranked_action</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">ranked_action</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="StupidHeuristic.rank_pathogen"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic.rank_pathogen">[docs]</a>    <span class="k">def</span> <span class="nf">rank_pathogen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="n">Pathogen</span><span class="p">,</span> <span class="n">prevalence</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Ranks pathogens according to the internal priorization</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen object to rank</span>
+<span class="sd">            prevalence {float} -- Percentage of currently infected people</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float -- Importance value for this pathogen</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="s1">&#39;global&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;prevalence&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">prevalence</span><span class="p">)</span> <span class="o">+</span>
+            <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;lethality&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span><span class="p">)</span> <span class="o">+</span>
+            <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span><span class="p">)</span> <span class="o">+</span>
+            <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span><span class="p">)</span> <span class="o">+</span>
+            <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;mobility&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">rank</span></div>
+
+<div class="viewcode-block" id="StupidHeuristic.evaluate_pathogens"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic.evaluate_pathogens">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate_pathogens</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Top level internal evaluation function</span>
+<span class="sd">        First tries to evaluate treatmen methods, before looking for isolation options.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pathogens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pat_state_dict</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;treatment&#39;</span><span class="p">]</span>
+
+        <span class="c1"># First get the most relevant pathogen (so we always get one to fight against)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pathogens</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Last round. All pathogens gone. Evaluation will fail</span>
+            <span class="k">return</span>
+        <span class="n">relevant_pathogens</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="n">pathogens</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
+            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">pat_name</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank_pathogen</span><span class="p">(</span>
+                <span class="n">pathogens</span><span class="p">[</span><span class="n">pat_name</span><span class="p">][</span><span class="s1">&#39;pathogen&#39;</span><span class="p">],</span>
+                <span class="n">pathogens</span><span class="p">[</span><span class="n">pat_name</span><span class="p">][</span><span class="s1">&#39;prevalence&#39;</span><span class="p">]),</span>
+            <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">relevant_pathogen</span> <span class="o">=</span> <span class="n">relevant_pathogens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Get the actual pathogen for statistical pathogen data</span>
+        <span class="n">pathogen</span> <span class="o">=</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">relevant_pathogen</span><span class="p">][</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">relevant_pathogen</span><span class="p">][</span><span class="s1">&#39;mAva&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">deploy_in_cities</span><span class="p">(</span><span class="n">pathogen</span><span class="p">,</span> <span class="s1">&#39;medication&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">relevant_pathogen</span><span class="p">][</span><span class="s1">&#39;vAva&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">deploy_in_cities</span><span class="p">(</span><span class="n">pathogen</span><span class="p">,</span> <span class="s1">&#39;vaccine&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">relevant_pathogen</span><span class="p">][</span><span class="s1">&#39;any_action&#39;</span><span class="p">]:</span>
+            <span class="c1"># Maybe we should develop something</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decide_vacc_or_med</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="n">rank</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="s1">&#39;global&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;prevalence&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">relevant_pathogen</span><span class="p">][</span><span class="s1">&#39;prevalence&#39;</span><span class="p">])</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;lethality&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span><span class="p">)</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">action</span><span class="o">.</span><span class="n">is_possible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">rank</span><span class="p">,</span> <span class="n">action</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">isolate_cities</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+
+        <span class="c1"># When a medication for the most relevant pathogen is currently under</span>
+        <span class="c1"># development and containment doesn&#39;t make sense it may be a good idea</span>
+        <span class="c1"># to already prepare a medication for the second most relevant pathogen.</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pathogens</span><span class="p">[</span><span class="n">relevant_pathogen</span><span class="p">][</span><span class="s1">&#39;vDev&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">relevant_pathogen</span><span class="p">][</span><span class="s1">&#39;mDev&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">relevant_pathogens</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">second_pathogen</span> <span class="o">=</span> <span class="n">relevant_pathogens</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">pathogen</span> <span class="o">=</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">second_pathogen</span><span class="p">][</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">second_pathogen</span><span class="p">][</span><span class="s1">&#39;any_action&#39;</span><span class="p">]:</span>
+                <span class="k">return</span>
+
+            <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decide_vacc_or_med</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="n">rank</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="s1">&#39;global&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;prevalence&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogens</span><span class="p">[</span><span class="n">second_pathogen</span><span class="p">][</span><span class="s1">&#39;prevalence&#39;</span><span class="p">])</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;lethality&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span><span class="p">)</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">action</span><span class="o">.</span><span class="n">is_possible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">rank</span><span class="p">,</span> <span class="n">action</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="StupidHeuristic.decide_vacc_or_med"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic.decide_vacc_or_med">[docs]</a>    <span class="k">def</span> <span class="nf">decide_vacc_or_med</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="n">Pathogen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Action</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Applies a decision tree to make a decision whether to develop a vaccine or medcine</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen Object to develop something against</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Action -- The final development action</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># High infectivity</span>
+        <span class="k">if</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">DevelopMedication</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">DevelopVaccine</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span> <span class="o">&gt;</span> <span class="mf">0.25</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span> <span class="o">&gt;=</span> <span class="mf">0.75</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">DevelopMedication</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">DevelopVaccine</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">DevelopVaccine</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="StupidHeuristic.get_eligible_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic.get_eligible_cities">[docs]</a>    <span class="k">def</span> <span class="nf">get_eligible_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s1">&#39;City&#39;</span><span class="p">],</span> <span class="s1">&#39;City&#39;</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Get all cities with a named pathogen.</span>
+<span class="sd">        To make evaluation easier also directly return the largest city</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen_name {str}  -- Name pf the pathogen to search</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[List[&#39;City&#39;], &#39;City&#39;] -- A list of cities with the pathogen and the largest of these cities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">eligible_cities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">cities_with_pathogen</span><span class="p">[</span><span class="n">pathogen_name</span><span class="p">]</span>
+
+        <span class="n">largest_city</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">eligible_cities</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">city</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">population</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">eligible_cities</span><span class="p">,</span> <span class="n">largest_city</span></div>
+
+<div class="viewcode-block" id="StupidHeuristic.deploy_in_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic.deploy_in_cities">[docs]</a>    <span class="k">def</span> <span class="nf">deploy_in_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="n">Pathogen</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Deploy medication or vaccine to city</span>
+<span class="sd">        Generates the according actions.</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen to treat</span>
+<span class="sd">            kind {str} -- medication or vaccine</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">eligible_cities</span><span class="p">,</span> <span class="n">largest_city</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_eligible_cities</span><span class="p">(</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">eligible_cities</span><span class="p">:</span>
+            <span class="c1"># Priority will be affected by rank later</span>
+            <span class="n">rank</span> <span class="o">=</span> <span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span> <span class="o">*</span> <span class="n">city</span><span class="o">.</span><span class="n">population</span><span class="p">)</span><span class="o">/</span><span class="n">largest_city</span><span class="o">.</span><span class="n">population</span>
+            <span class="n">rank</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;city_eligibility&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;medication&#39;</span><span class="p">:</span>
+                <span class="n">action</span> <span class="o">=</span> <span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">actions</span><span class="o">.</span><span class="n">DeployMedication</span><span class="p">(</span><span class="n">city</span><span class="p">,</span>
+                                                         <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">AntiVaccinationism</span><span class="p">):</span>
+                    <span class="c1"># Do not vaccinate in cities with AntiVaccinationism</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">deployed_vaccines</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">action</span> <span class="o">=</span> <span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">actions</span><span class="o">.</span><span class="n">DeployVaccine</span><span class="p">(</span><span class="n">city</span><span class="p">,</span>
+                                                      <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">action</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="StupidHeuristic.isolate_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.stupid.StupidHeuristic.isolate_cities">[docs]</a>    <span class="k">def</span> <span class="nf">isolate_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="s1">&#39;Pathogen&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate isolation events if applicable</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen to generate isolation events for</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Virus has already spread. Pointless to isolate</span>
+            <span class="k">return</span>
+        <span class="n">eligible_cities</span><span class="p">,</span> <span class="n">largest_city</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_eligible_cities</span><span class="p">(</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">eligible_cities</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">under_quarantine</span> <span class="ow">or</span> <span class="n">city</span><span class="o">.</span><span class="n">airport_closed</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;isolation&#39;</span><span class="p">]</span>
+
+            <span class="n">rank</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="s1">&#39;global&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;prevalence&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span> <span class="o">*</span> <span class="n">city</span><span class="o">.</span><span class="n">population</span><span class="p">)</span><span class="o">/</span><span class="n">largest_city</span><span class="o">.</span><span class="n">population</span><span class="p">)</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;lethality&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span><span class="p">)</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;mobility&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span><span class="p">)</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="s1">&#39;infectivity&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">infectivity</span><span class="p">))</span>
+
+            <span class="n">quarantine_rounds</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">quarantine_rounds</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">action</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">action_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">rank</span><span class="p">,</span> <span class="n">action</span><span class="p">))</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

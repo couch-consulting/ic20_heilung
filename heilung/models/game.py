@@ -222,7 +222,7 @@ class Game:
     def pathogens_in_need_of_medication(self) -> List[Pathogen]:
         """Get list of pathogens for which the current game still needs to develop medication
         needs to is defined as: It is useful to develop this medication because the pathogen
-         is still an active outbreak in at least one city
+        is still an active outbreak in at least one city
 
 
         Returns:

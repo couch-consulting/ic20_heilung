@@ -1,0 +1,506 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.models.game &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.models.game</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">reduce</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span> <span class="nn">heilung.models</span> <span class="kn">import</span> <span class="n">City</span><span class="p">,</span> <span class="n">events</span>
+<span class="kn">from</span> <span class="nn">heilung.models.events.event_utilities</span> <span class="kn">import</span> <span class="n">convert_events</span>
+<span class="kn">from</span> <span class="nn">heilung.models.events.medicationDeployed</span> <span class="kn">import</span> <span class="n">MedicationDeployed</span>
+<span class="kn">from</span> <span class="nn">heilung.models.events.vaccineDeployed</span> <span class="kn">import</span> <span class="n">VaccineDeployed</span>
+<span class="kn">from</span> <span class="nn">heilung.models.pathogen</span> <span class="kn">import</span> <span class="n">Pathogen</span>
+
+
+<div class="viewcode-block" id="Game"><a class="viewcode-back" href="../../../index.html#heilung.models.Game">[docs]</a><span class="k">class</span> <span class="nc">Game</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Models the overall game state</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Models the current gamestate into one handy object with some additional candy</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            state {dict} -- State of the game as sent by the client as JSON</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">round</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;round&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outcome</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;outcome&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;points&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cities</span> <span class="o">=</span> <span class="p">{</span><span class="n">city</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">City</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
+            <span class="n">city</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">city</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;cities&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">convert_events</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;events&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points_per_round</span> <span class="o">=</span> <span class="mi">20</span>
+
+        <span class="c1"># Feature that shall not be recomputed on every call like properties below</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cities_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">biggest_city</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cities_list</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">population</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infected_cities</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="p">]</span>
+
+        <span class="n">pathogen_names_in_cities</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">outbreak</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">outbreaks</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span> <span class="o">=</span> <span class="p">[</span><span class="n">pathogen</span> <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_encountered</span> <span class="k">if</span>
+                                    <span class="n">pathogen</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">pathogen_names_in_cities</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cities_with_pathogen</span> <span class="o">=</span> <span class="p">{</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_cities_with_pathogen</span><span class="p">(</span>
+            <span class="n">pathogen</span><span class="p">)</span> <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span><span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathogen_percentage_of_infected</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathogen_percentage_of_immune</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pathogen_percentage_of_infected</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_percentage_of_infected</span><span class="p">(</span>
+                <span class="n">pathogen</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pathogen_percentage_of_immune</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_percentage_of_immune</span><span class="p">(</span>
+                <span class="n">pathogen</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_vaccine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_events_sub_list</span><span class="p">(</span>
+            <span class="s1">&#39;vaccineInDevelopment&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_vaccine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_events_sub_list</span><span class="p">(</span>
+            <span class="s1">&#39;vaccineAvailable&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_medication</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_events_sub_list</span><span class="p">(</span>
+            <span class="s1">&#39;medicationInDevelopment&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_medication</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_events_sub_list</span><span class="p">(</span>
+            <span class="s1">&#39;medicationAvailable&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Construct a pat state dict for relevant pathogens</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pat_state_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">pat</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;mDev&#39;</span><span class="p">:</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_medication</span><span class="p">,</span>
+                <span class="s1">&#39;vDev&#39;</span><span class="p">:</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_vaccine</span><span class="p">,</span>
+                <span class="s1">&#39;mAva&#39;</span><span class="p">:</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_medication</span><span class="p">,</span>
+                <span class="s1">&#39;vAva&#39;</span><span class="p">:</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_vaccine</span><span class="p">,</span>
+                <span class="s1">&#39;any_action&#39;</span><span class="p">:</span> <span class="n">pat</span> <span class="ow">in</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_medication</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_vaccine</span> <span class="o">+</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_medication</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_vaccine</span><span class="p">),</span>
+                <span class="s1">&#39;prevalence&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_percentage_of_infected</span><span class="p">(</span><span class="n">pat</span><span class="p">),</span>
+                <span class="s1">&#39;immunity&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_percentage_of_immune</span><span class="p">(</span><span class="n">pat</span><span class="p">),</span>
+                <span class="s1">&#39;pathogen&#39;</span><span class="p">:</span> <span class="n">pat</span><span class="p">,</span>
+            <span class="p">}</span> <span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="Game.get_state_dict"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.get_state_dict">[docs]</a>    <span class="k">def</span> <span class="nf">get_state_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">short</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Helper function to get a dataset summarizing the the current state (filtered for only infected cities)</span>
+
+<span class="sd">        Keyword Arguments:</span>
+<span class="sd">            short {bool} -- Flag to include more detailed information about infected cities (default: {True})</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict -- A dictionary summarizing the current state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;round&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">round</span><span class="p">,</span>
+            <span class="s1">&#39;outcome&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">outcome</span><span class="p">,</span>
+            <span class="s1">&#39;points&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">,</span>
+            <span class="s1">&#39;infected_city_count&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outbreaks</span><span class="p">),</span>
+            <span class="s1">&#39;relevant_pathogens_count&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span><span class="p">),</span>
+            <span class="s1">&#39;total_population&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_population</span><span class="p">,</span>
+            <span class="s1">&#39;relevant_pathogens&#39;</span><span class="p">:</span> <span class="p">[(</span><span class="n">pat</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pat</span><span class="p">)))</span> <span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span><span class="p">],</span>
+            <span class="s1">&#39;infected_cities&#39;</span><span class="p">:</span> <span class="p">{</span><span class="n">city</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">infected_cities</span><span class="p">},</span>
+            <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span>
+            <span class="s1">&#39;game_events&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">],</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">short</span><span class="p">:</span>
+            <span class="n">infected_cities</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">city</span><span class="p">,</span> <span class="n">outbreak</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">outbreaks</span><span class="p">:</span>
+                <span class="n">infected_city</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="s1">&#39;population&#39;</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">population</span><span class="p">,</span>
+                    <span class="s1">&#39;connections&#39;</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">connections</span><span class="p">,</span>
+                    <span class="s1">&#39;economy&#39;</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">economy</span><span class="p">,</span>
+                    <span class="s1">&#39;government&#39;</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">government</span><span class="p">,</span>
+                    <span class="s1">&#39;hygiene&#39;</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">hygiene</span><span class="p">,</span>
+                    <span class="s1">&#39;awareness&#39;</span><span class="p">:</span> <span class="n">city</span><span class="o">.</span><span class="n">awareness</span><span class="p">,</span>
+                    <span class="s1">&#39;outbreak&#39;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s1">&#39;pathogen&#39;</span><span class="p">:</span> <span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="s1">&#39;prevalence&#39;</span><span class="p">:</span> <span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span><span class="p">,</span>
+                        <span class="s1">&#39;since_round&#39;</span><span class="p">:</span> <span class="n">outbreak</span><span class="o">.</span><span class="n">sinceRound</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="n">infected_cities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">infected_city</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;infected_cities&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">infected_cities</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Game.state_recap"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.state_recap">[docs]</a>    <span class="k">def</span> <span class="nf">state_recap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">short</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Help function to get a easily human readable output of the current state (filtered for only infected cities)</span>
+
+
+<span class="sd">        Keyword Arguments:</span>
+<span class="sd">            short {bool} -- Flag to include more detailed information about infected cities (default: {False})</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str -- The short summary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">recap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_state_dict</span><span class="p">(</span><span class="n">short</span><span class="p">)</span>
+        <span class="n">overview</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">***** </span><span class="si">{recap[&#39;round&#39;]}</span><span class="s2"> Round Overview *****</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Outcome: </span><span class="si">{recap[&#39;outcome&#39;]}</span><span class="s2"> | &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Points: </span><span class="si">{recap[&#39;points&#39;]}</span><span class="s2"> | &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Infected Cities: </span><span class="si">{recap[&#39;infected_city_count&#39;]}</span><span class="s2"> | &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Relevant Pathogens: </span><span class="si">{recap[&#39;relevant_pathogens_count&#39;]}</span><span class="s2"> | &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Total Population: </span><span class="si">{recap[&#39;total_population&#39;]}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Active Pathogens: </span><span class="si">{recap[&#39;relevant_pathogens&#39;]}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="c1"># f&quot;Infected Cities: {recap[&#39;infected_cities&#39;]}\n&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Error MSG: </span><span class="si">{recap[&#39;error&#39;]}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Game events: </span><span class="si">{recap[&#39;game_events&#39;]}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">overview</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">outbreaks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">City</span><span class="p">,</span> <span class="s1">&#39;Outbreak&#39;</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;Get a list of all cities which got an outbreak</span>
+
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Tuple[City, Outbreak]] -- list of city and the outbreak objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">city</span><span class="p">,</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">has_new_bioTerrorism</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">City</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Check whether a city has a new and unhandled bioTerrorism</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[City] -- List of cities with new bioTerrorism</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cities_with_bio_terror</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">has_event</span><span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">BioTerrorism</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">events</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;bioTerrorism&#39;</span> <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">sinceRound</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">round</span> \
+                            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span> \
+                            <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">pat_state_dict</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;any_action&#39;</span><span class="p">]</span> \
+                            <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">under_quarantine</span> <span class="ow">or</span> <span class="n">city</span><span class="o">.</span><span class="n">airport_closed</span><span class="p">):</span>
+                        <span class="n">cities_with_bio_terror</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">city</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cities_with_bio_terror</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">total_population</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Sum up the number of citizens per city</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int -- sum of all citizens</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span> <span class="p">[</span><span class="n">city</span><span class="o">.</span><span class="n">population</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+
+    <span class="c1"># Following are functions and properties to gather data about the game state</span>
+    <span class="c1"># TODO decide if refactor</span>
+
+    <span class="c1"># Cities state</span>
+<div class="viewcode-block" id="Game.get_cities_with_pathogen"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.get_cities_with_pathogen">[docs]</a>    <span class="k">def</span> <span class="nf">get_cities_with_pathogen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">City</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Get a list of cities with a certain pathogen</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen object to search for</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[City] -- Cities with a pathogen</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities_with_pathogen</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_cities_with_pathogen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">City</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Build list of cities in which the given pathogen in present</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen object</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[City] -- Cities with an according pathogen outbreak</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span> <span class="k">if</span>
+                <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="c1"># Pathogens state</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pathogens_encountered</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Pathogen</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Builds a list of already encountered pathogens</span>
+
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Pathogen] -- List of all pathogens</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_events_sub_list</span><span class="p">(</span><span class="s1">&#39;pathogenEncountered&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pathogens_in_need_of_medication</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Pathogen</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Get list of pathogens for which the current game still needs to develop medication</span>
+<span class="sd">        needs to is defined as: It is useful to develop this medication because the pathogen</span>
+<span class="sd">        is still an active outbreak in at least one city</span>
+
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Pathogen] -- List of all pathogens in need of medication</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: Check if still necessary</span>
+        <span class="n">path_list1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span>
+        <span class="n">path_list2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_medication</span>
+        <span class="n">path_list3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_medication</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">pathogen</span> <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="n">path_list1</span> <span class="k">if</span> <span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">path_list2</span> <span class="o">+</span> <span class="n">path_list3</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pathogens_in_need_of_vaccine</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Pathogen</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Get list of pathogens for which the current game still needs to develop vaccines</span>
+<span class="sd">        needs to is defined as: It is useful to develop this medication</span>
+<span class="sd">        because the pathogen is still an active outbreak in at least one city</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Pathogen] -- List of all pathogens in need of a vaccine</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: Check if still necessary</span>
+        <span class="n">path_list1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span>
+        <span class="n">path_list2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens__with_developing_vaccine</span>
+        <span class="n">path_list3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_with_vaccine</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">pathogen</span> <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="n">path_list1</span> <span class="k">if</span> <span class="n">pathogen</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">path_list2</span> <span class="o">+</span> <span class="n">path_list3</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Game.pathogens_events_sub_list"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.pathogens_events_sub_list">[docs]</a>    <span class="k">def</span> <span class="nf">pathogens_events_sub_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Pathogen</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Get a list of pathogen objects for the specified event type</span>
+
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            event_type {str} -- Name of the event</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Pathogen] -- [description]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">pathogen</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span> <span class="k">if</span>
+                <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">event_type</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Game.get_relevant_pathogens"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.get_relevant_pathogens">[docs]</a>    <span class="k">def</span> <span class="nf">get_relevant_pathogens</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogens</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Pathogen</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Pathogen</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Filters out irrelevant pathogens for a given list of pathogens</span>
+
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogens {List[Pathogen]} -- List of pathogens to evaluate</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Pathogen] -- Remaining pathogens</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">relevant_pathogens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogens_in_cities</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">pathogen</span> <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="n">pathogens</span> <span class="k">if</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="n">relevant_pathogens</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Game.get_percentage_of_infected"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.get_percentage_of_infected">[docs]</a>    <span class="k">def</span> <span class="nf">get_percentage_of_infected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="n">Pathogen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the fraction of infected citizens</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen to look for</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float -- Fraction of infected</span>
+
+<span class="sd">        deprecated:: 1.1.0</span>
+<span class="sd">            move to pat_state_dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogen_percentage_of_infected</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_percentage_of_infected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="n">Pathogen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the amount of all currently alive citizen infected by this pathogen</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- [description]</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float -- fraction of infected</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">total_pop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_population</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">total_infected</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">city</span><span class="o">.</span><span class="n">population</span> <span class="o">*</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">infected_cities</span> <span class="k">if</span>
+                              <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span> <span class="o">==</span> <span class="n">pathogen</span><span class="p">])</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">total_pop</span> <span class="o">*</span> <span class="n">total_infected</span>
+
+<div class="viewcode-block" id="Game.get_percentage_of_immune"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.get_percentage_of_immune">[docs]</a>    <span class="k">def</span> <span class="nf">get_percentage_of_immune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the fraction of immune citizens</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- Pathogen to look for</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float -- Fraction of immune</span>
+
+<span class="sd">        deprecated:: 1.1.0</span>
+<span class="sd">            move to pat_state_dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathogen_percentage_of_immune</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_percentage_of_immune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pathogen</span><span class="p">:</span> <span class="n">Pathogen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the amount of all currently alive citizen which are not infected in a city with a outbreak and vac deployed</span>
+<span class="sd">        Whereby the people made immune by medication is assumed to be the worst case estimate</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            pathogen {Pathogen} -- [description]</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float -- fraction of immune (value between 0 and 1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">total_pop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_population</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># Immune in currently infected cities</span>
+        <span class="n">infected_cities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)</span>
+        <span class="n">total_immune</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">city</span><span class="o">.</span><span class="n">population</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span><span class="p">)</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">infected_cities</span> <span class="k">if</span>
+                            <span class="n">pathogen</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">deployed_vaccines</span><span class="p">])</span>
+        <span class="c1"># Worst case estimate for medication, only 30% became immune</span>
+        <span class="n">total_immune</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">city</span><span class="o">.</span><span class="n">population</span> <span class="o">*</span> <span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">prevalence</span> <span class="o">/</span> <span class="mf">0.7</span> <span class="o">*</span> <span class="mf">0.3</span><span class="p">)</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">infected_cities</span> <span class="k">if</span>
+                             <span class="n">pathogen</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">deployed_medication</span><span class="p">])</span>
+
+        <span class="c1"># Immune in already &quot;healed&quot; cities</span>
+        <span class="n">non_outbreak_cities</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities_list</span> <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">outbreak</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">cities_with_vaccine</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">non_outbreak_cities</span> <span class="k">if</span> <span class="p">[</span><span class="kc">True</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">events</span> <span class="k">if</span>
+                                                                        <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span>
+                                                                                   <span class="n">VaccineDeployed</span><span class="p">)</span>
+                                                                        <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">pathogen</span> <span class="o">==</span> <span class="n">pathogen</span><span class="p">]]</span>
+        <span class="n">cities_with_medication_only</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">non_outbreak_cities</span> <span class="k">if</span>
+                                       <span class="n">city</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cities_with_vaccine</span> <span class="ow">and</span> <span class="p">[</span><span class="kc">True</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">city</span><span class="o">.</span><span class="n">events</span> <span class="k">if</span>
+                                                                            <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span>
+                                                                                       <span class="n">MedicationDeployed</span><span class="p">)</span>
+                                                                            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">pathogen</span> <span class="o">==</span> <span class="n">pathogen</span><span class="p">]]</span>
+        <span class="c1"># all population of all cities which were infected and are now healed, i.e. pathogen does not exist anymore</span>
+        <span class="n">total_immune</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">city</span><span class="o">.</span><span class="n">population</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">cities_with_vaccine</span><span class="p">])</span>
+        <span class="c1"># if vac not but only medication assume 50% are immune</span>
+        <span class="n">total_immune</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">city</span><span class="o">.</span><span class="n">population</span> <span class="o">*</span>
+                             <span class="mf">0.5</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">cities_with_medication_only</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">total_pop</span> <span class="o">*</span> <span class="n">total_immune</span>
+
+<div class="viewcode-block" id="Game.has_event"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.has_event">[docs]</a>    <span class="k">def</span> <span class="nf">has_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check whether the game has a given event</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            event_object {Event} -- Global event object to look for.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool -- Has or has not</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">event_object</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Game.get_connections_sorted_for_highest_population_first"><a class="viewcode-back" href="../../../index.html#heilung.models.Game.get_connections_sorted_for_highest_population_first">[docs]</a>    <span class="k">def</span> <span class="nf">get_connections_sorted_for_highest_population_first</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">city</span><span class="p">:</span> <span class="n">City</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">City</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Return connection list sorted for highest population first</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            city {City} -- City for ?</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[City] -- List of ordered cutues</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">con_with_pop</span> <span class="o">=</span> <span class="p">[[</span><span class="n">tmp_city_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cities</span><span class="p">[</span><span class="n">tmp_city_name</span><span class="p">]</span><span class="o">.</span><span class="n">population</span><span class="p">]</span> <span class="k">for</span> <span class="n">tmp_city_name</span> <span class="ow">in</span>
+                        <span class="n">city</span><span class="o">.</span><span class="n">connections</span><span class="p">]</span>
+        <span class="n">con_sorted</span> <span class="o">=</span> <span class="p">[</span><span class="n">con_tuple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">con_tuple</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="n">con_with_pop</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">con_sorted</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">last_development_finished_since</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the number of rounds since the last development has been finished</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int -- int between 0 and current number of round minus smallest development time or none if none yet finished</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">exists_flag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">finished_since</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="p">(</span><span class="n">events</span><span class="o">.</span><span class="n">MedicationAvailable</span><span class="p">,</span> <span class="n">events</span><span class="o">.</span><span class="n">VaccineAvailable</span><span class="p">)):</span>
+                <span class="n">exists_flag</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">tmp_finished_since</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round</span> <span class="o">-</span> <span class="n">event</span><span class="o">.</span><span class="n">sinceRound</span>
+                <span class="k">if</span> <span class="n">tmp_finished_since</span> <span class="o">&gt;</span> <span class="n">finished_since</span><span class="p">:</span>
+                    <span class="n">finished_since</span> <span class="o">=</span> <span class="n">tmp_finished_since</span>
+        <span class="k">if</span> <span class="n">exists_flag</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">finished_since</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
