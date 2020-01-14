@@ -54,7 +54,6 @@ class Stateheuristic:
                     global_action_scale.increase_on_dependency(adapted_pathogen_name, (1 - pathogen.lethality)
                                                                * global_action_scale.influence_lvl2)
 
-                    # TODO adapt below
                     # More important the higher or the lower it is but not really in between thus formula: 4(x-0.5)^2
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                max(4 * (pathogen.mobility - 0.5) ** 2, 0.25)
@@ -64,6 +63,7 @@ class Stateheuristic:
                     global_action_scale.increase_on_dependency(adapted_pathogen_name, (1 - pathogen.infectivity)
                                                                * global_action_scale.influence_lvl2)
 
+                    # If the pathogen is only in one city or only one pathogen is overall relevant, increase importance
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                int((len(self.game.pathogens_in_cities) == 1) or (len(
                                                                    self.game.get_cities_with_pathogen(pathogen)) == 1))
@@ -81,7 +81,6 @@ class Stateheuristic:
                     global_action_scale.increase_on_dependency(adapted_pathogen_name, pathogen.lethality
                                                                * global_action_scale.influence_lvl3)
 
-                    # TODO below
                     # The less mobile the pathogen, the more important
                     global_action_scale.increase_on_dependency(adapted_pathogen_name,
                                                                (1 - pathogen.mobility)
