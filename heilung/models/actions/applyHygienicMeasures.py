@@ -6,8 +6,13 @@ class ApplyHygienicMeasures(Action):
     """
 
     def __init__(self, city, possible_cities=None):
-        """
-        :param city: city object of the city in which hygienic measures should be applied
+        """Generates on object of this action
+
+        Arguments:
+            city {City} -- city object of the city in which hygienic measures should be applied
+
+        Keyword Arguments:
+            possible_cities {List[City]} -- List of possible cities to evaluate this event for (default: {None})
         """
         if possible_cities is None:
             self.possible_cities = []

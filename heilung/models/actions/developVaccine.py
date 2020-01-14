@@ -7,8 +7,13 @@ class DevelopVaccine(Action):
     """
 
     def __init__(self, pathogen, input_is_str=False):
-        """
-        :param pathogen: pathogen object
+        """Generates on object of this action
+
+        Arguments:
+            pathogen {Opional[Pathogen, str]} -- pathogen object of the pathogen for which a vaccine shall be developed
+
+        Keyword Arguments:
+            input_is_str {bool} -- Whether the Pathon is either a string or Pathogen object (default: {False})
         """
         action_type = "developVaccine"
         if input_is_str:

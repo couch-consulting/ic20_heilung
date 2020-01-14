@@ -8,9 +8,14 @@ class DeployMedication(Action):
     """
 
     def __init__(self, city, pathogen, possible_cities=None):
-        """
-        :param pathogen: pathogen object of the pathogen for which a medication shall be developed
-        :param city: city object of the city to which the medication shall be deployed
+        """Generates on object of this action
+
+        Arguments:
+            city {City} -- city object of the city to which the medication shall be deployed
+            pathogen {Pathogen} -- Pathogen object of the pathogen for which a medication shall be developed
+
+        Keyword Arguments:
+            possible_cities {List[City]} -- List of possible cities to evaluate this event for (default: {None})
         """
         if possible_cities is None:
             self.possible_cities = []

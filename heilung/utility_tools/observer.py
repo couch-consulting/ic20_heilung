@@ -1,5 +1,8 @@
-from os.path import isfile
 import json
+from os.path import isfile
+
+from heilung.models.action import Action
+from heilung.models.game import Game
 
 
 class Observer:
@@ -12,7 +15,14 @@ class Observer:
     actions = list()
     state_recaps = list()
 
-    def __init__(self, game: 'Game', action: 'Action', seed: str):
+    def __init__(self, game: Game, action: Action, seed: str):
+        """Initializes the observer
+
+        Arguments:
+            game {Game} -- The current game state object
+            action {Action} -- The action chosen by the heuristic
+            seed {str} -- Seed used for this execution
+        """
         self.game = game
         self.seed = seed
 
@@ -28,7 +38,8 @@ class Observer:
         for _, outbreak in game.outbreaks:
             self.encountered_pathogens[outbreak.pathogen.name] = outbreak.pathogen.to_dict()
 
-        for _, events in game.city_events:
+        city_events = [city.events for city in game.cities.values() if len(city.events) > 0]
+        for events in city_events:
             for event in events:
                 self.encountered_happenings[event.type] = event.to_dict()
 
@@ -68,7 +79,15 @@ class Observer:
             }
             json.dump(data, f, indent=4, sort_keys=True)
 
-    def get_city_state(self, city):
+    def get_city_state(self, city) -> dict:
+        """Render a dictionary from city data
+
+        Arguments:
+            city {City} -- A city object
+
+        Returns:
+            dict -- Dictionary of city attributes
+        """
         return {
             'name': city.name,
             'population': city.population,

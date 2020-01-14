@@ -1,12 +1,14 @@
 # Human heuristic
-from heilung.models import actions
-from . import h_utils
-from .stateheuristic import Stateheuristic
-from .gameplan import Gameplan
 import copy
 
+from heilung.models import Game, actions
 
-def get_decision(game: 'Game'):
+from . import h_utils
+from .gameplan import Gameplan
+from .stateheuristic import Stateheuristic
+
+
+def get_decision(game: Game):
     """
     Get decision for the human heuristic - main entry point
     :param game: Game Object

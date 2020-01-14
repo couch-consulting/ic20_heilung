@@ -3,12 +3,11 @@ import sys
 
 from flask import Flask, abort, request
 
-from heilung.utility_tools.observer import Observer
-from heilung.heuristics.human import human
 from heilung.heuristics.ensemble import ensemble
+from heilung.heuristics.human import human
 from heilung.heuristics.stupid import StupidHeuristic
 from heilung.models import Game
-
+from heilung.utility_tools.observer import Observer
 
 app = Flask(__name__)
 
@@ -26,7 +25,8 @@ def index():
     game = Game(request.json)
 
     if game.outcome in ['win', 'loss']:
-        # Save Results
+        # Save Results -- has no direct influence on statelessness of the service
+        # Just used for evaluation in comparisons
         global last_state_dic
         last_state_dic['outcome'] = game.outcome
         # - 1 since only the round up to this current round were survived
@@ -70,7 +70,7 @@ def seed_update(seed_id):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Server')
+    parser = argparse.ArgumentParser(description='IC20 Contribution Flask Based Development Server -- Do not use for production purposes')
     parser.add_argument('--seed', type=str, help='A custom seed to know for observation purposes', default='unknown')
     parser.add_argument('--silent', help='Remove any output of the game', action='store_true')
     parser.add_argument('--port', type=str, help='Port for server', default='5000')

@@ -7,8 +7,13 @@ class ExertInfluence(Action):
     """
 
     def __init__(self, city, possible_cities=None):
-        """
-        :param city: city object of the city in which influence shall be exerted
+        """Generates on object of this action
+
+        Arguments:
+            city {City} -- city object of the city in which influence shall be exerted
+
+        Keyword Arguments:
+            possible_cities {List[City]} -- List of possible cities to evaluate this event for (default: {None})
         """
         if possible_cities is None:
             self.possible_cities = []

@@ -6,9 +6,15 @@ class PutUnderQuarantine(Action):
     """
 
     def __init__(self, city, num_rounds, possible_cities=None):
-        """
-        :param city: City object
-        :param num_rounds: number of rounds to quarantine the city as a positive integer greater than 0
+        """Generates on object of this action
+
+        Arguments:
+            city {City} -- City object
+            num_rounds {int} -- Number of rounds to quarantine the city as a positive integer greater than 0
+
+
+        Keyword Arguments:
+            possible_cities {List[City]} -- List of possible cities to evaluate this event for (default: {None})
         """
         if possible_cities is None:
             self.possible_cities = []
