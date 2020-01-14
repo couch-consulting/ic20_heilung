@@ -1,0 +1,601 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.heuristics.human.gameplan &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.heuristics.human.gameplan</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">math</span>
+
+<span class="kn">from</span> <span class="nn">heilung.models</span> <span class="kn">import</span> <span class="n">actions</span>
+
+<span class="kn">from</span> <span class="nn">.h_utils</span> <span class="kn">import</span> <span class="n">compute_pathogen_importance</span>
+
+
+<div class="viewcode-block" id="Gameplan"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan">[docs]</a><span class="k">class</span> <span class="nc">Gameplan</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gameplan for the current game state for the human heuristic</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">game</span><span class="p">,</span> <span class="n">sorted_city_action</span><span class="p">,</span> <span class="n">sorted_global_actions</span><span class="p">,</span> <span class="n">weighted_pathogens</span><span class="p">,</span> <span class="n">dev_needed</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">game</span> <span class="o">=</span> <span class="n">game</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sorted_city_action</span> <span class="o">=</span> <span class="n">sorted_city_action</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span> <span class="o">=</span> <span class="n">sorted_global_actions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span> <span class="o">=</span> <span class="n">weighted_pathogens</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dev_needed</span> <span class="o">=</span> <span class="n">dev_needed</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_list_len</span> <span class="o">=</span> <span class="mi">10</span>
+
+<div class="viewcode-block" id="Gameplan.build_action_list"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.build_action_list">[docs]</a>    <span class="k">def</span> <span class="nf">build_action_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build a list of actions whereby the first one is the most important action to perform in this round</span>
+<span class="sd">        List may vary depending on the gameplan</span>
+<span class="sd">            - sometimes only 1 action is suggested due to the game state and gameplan</span>
+<span class="sd">        :return: List[Action]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_action</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="n">action</span> <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="n">result</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Gameplan.get_best_action"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_best_action">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_action</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the best action for the current game state</span>
+<span class="sd">        :return: Action</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Tmp vars</span>
+        <span class="n">ava_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points</span>
+
+        <span class="c1"># Round 1 Gameplan - special because guaranteed to have 40 points and early in game</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">round</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_1_gameplan</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span>
+
+        <span class="c1"># Round X Gameplan</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_x_gameplan</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span></div>
+
+    <span class="c1"># Gameplan</span>
+<div class="viewcode-block" id="Gameplan.round_1_gameplan"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.round_1_gameplan">[docs]</a>    <span class="k">def</span> <span class="nf">round_1_gameplan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get best action in round 1</span>
+<span class="sd">        :param ava_points: points to spend in this round</span>
+<span class="sd">        :return: Action object or list of action objects depending on the gameplan situation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">ava_points</span> <span class="o">&lt;</span> <span class="mi">40</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()</span>
+
+        <span class="c1"># Else First action in first round</span>
+        <span class="c1"># Get all cities in which the mobility must be reduced</span>
+        <span class="n">candidate_cities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_duration_candidate_cities</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">candidate_cities</span><span class="p">:</span>
+            <span class="c1"># Features</span>
+            <span class="n">pats_in_candidate_cities</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">candidate_cities</span><span class="p">]</span>
+            <span class="n">not_candidate</span> <span class="o">=</span> <span class="p">[</span><span class="n">pat</span> <span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_in_cities</span> <span class="k">if</span> <span class="n">pat</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pats_in_candidate_cities</span><span class="p">]</span>
+            <span class="n">most_important_pat_candidate</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">candidate_cities</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">compute_pathogen_importance</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">pat_cand_rank</span> <span class="o">=</span> <span class="n">compute_pathogen_importance</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">[</span><span class="n">most_important_pat_candidate</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">],</span>
+                <span class="n">most_important_pat_candidate</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">)</span>
+            <span class="n">more_important_ava</span> <span class="o">=</span> <span class="p">[</span><span class="n">pat</span> <span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="n">not_candidate</span> <span class="k">if</span>
+                                  <span class="n">compute_pathogen_importance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">[</span><span class="n">pat</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">pat</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">pat_cand_rank</span><span class="p">]</span>
+
+            <span class="c1"># Use features to test if a harmless mobile exits</span>
+            <span class="c1"># (e.g. a pathogen which would spread to every city and infect them before any other could</span>
+            <span class="c1"># and if a more important existing pathogen is not a candidate,</span>
+            <span class="c1"># if both are True skip this step and go to global actions</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">more_important_ava</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_action_for_candidate_cities</span><span class="p">(</span><span class="n">candidate_cities</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">max_list_len</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Gameplan.round_x_gameplan"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.round_x_gameplan">[docs]</a>    <span class="k">def</span> <span class="nf">round_x_gameplan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get best action any round greater 1</span>
+<span class="sd">        :param ava_points: points to spend in this round</span>
+<span class="sd">        :return: Action object or list of action objects depending on the gameplan situation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Build up fall back points for bio terrorism and isolation in round X gameplan</span>
+        <span class="n">ava_points</span> <span class="o">-=</span> <span class="mi">20</span>
+        <span class="n">saved_points</span> <span class="o">=</span> <span class="mi">20</span>
+
+        <span class="n">isolated_cities</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_isolated_cities</span><span class="p">()</span>
+
+        <span class="c1"># Isolated Gameplan (Make pathogens die out)</span>
+        <span class="k">if</span> <span class="n">isolated_cities</span><span class="p">:</span>
+            <span class="c1"># Get real number of points to avoid having not isolated cities</span>
+            <span class="c1"># Also counters bio terrorism since bio terrorism only needs to be specially treated if it is also isolated</span>
+            <span class="c1"># It only does no catch if we have an isolated bio terrorism with mobility equal 0</span>
+            <span class="c1"># - this case is handled by default by the global action gamneplan and heuristic</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_action_for_isolated_cities</span><span class="p">(</span><span class="n">isolated_cities</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">,</span> <span class="n">saved_points</span><span class="p">)</span>
+
+        <span class="n">cities_with_bio_terrorism</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">has_new_bioTerrorism</span>
+        <span class="c1"># Bio Terrorism game plan (counter bio terrorism of completely new pathogens)</span>
+        <span class="k">if</span> <span class="n">cities_with_bio_terrorism</span><span class="p">:</span>
+            <span class="c1"># we have a isolated bio terrorism with mobility equal 0, hence add saved points to ava points</span>
+            <span class="n">ava_points</span> <span class="o">+=</span> <span class="n">saved_points</span>
+
+        <span class="c1"># Save points</span>
+        <span class="k">if</span> <span class="n">ava_points</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span><span class="p">:</span>
+            <span class="c1"># If no global actions anymore, do most important city action</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_action_for_global_actions</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span></div>
+
+    <span class="c1"># Specifics for City actions</span>
+<div class="viewcode-block" id="Gameplan.get_best_city_action"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_best_city_action">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_city_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">,</span> <span class="n">points_needed</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get most important action of a given sorted action list</span>
+<span class="sd">        and optionally consider how much point shall be available in the future</span>
+<span class="sd">        :param points_needed: points needed for an action that is desired to be executed next</span>
+<span class="sd">        :param ava_points: point allowed to use</span>
+<span class="sd">        :return: the best possible city action ready to be build</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">ava_points</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Impossible to do anything if current amount of points is 0</span>
+            <span class="c1"># However, currently, this should never become relevant since this case is considered earlier</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)]</span>
+
+        <span class="c1"># Check if desired action for next round exists</span>
+        <span class="k">if</span> <span class="n">points_needed</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_action_for_points</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span>
+        <span class="c1"># Logic for wait &quot;heuristic&quot;</span>
+        <span class="n">points_per_round</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points_per_round</span>
+        <span class="k">if</span> <span class="n">points_per_round</span> <span class="o">&lt;</span> <span class="n">points_needed</span><span class="p">:</span>
+            <span class="c1"># If pointer_per_round &lt; needed points</span>
+            <span class="k">if</span> <span class="n">ava_points</span> <span class="o">&gt;</span> <span class="n">points_needed</span> <span class="o">-</span> <span class="n">points_per_round</span><span class="p">:</span>  <span class="c1"># 42 &gt; 40 - 20</span>
+
+                <span class="c1"># if pointer_per_round + ava__points &gt; needed_points, spend: ava - (needed - per_round)</span>
+                <span class="n">points_to_spend</span> <span class="o">=</span> <span class="n">ava_points</span> <span class="o">-</span> <span class="p">(</span><span class="n">points_needed</span> <span class="o">-</span> <span class="n">points_per_round</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_action_for_points</span><span class="p">(</span><span class="n">points_to_spend</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">points_per_round</span> <span class="o">+</span> <span class="n">ava_points</span> <span class="o">==</span> <span class="n">points_needed</span><span class="p">:</span>
+                <span class="c1"># if pointer per round + ava = needed points, end round</span>
+                <span class="k">return</span> <span class="p">[(</span><span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)]</span>
+
+            <span class="k">elif</span> <span class="n">points_per_round</span> <span class="o">+</span> <span class="n">ava_points</span> <span class="o">&lt;</span> <span class="n">points_needed</span><span class="p">:</span>
+                <span class="c1"># if pointer per round + ava &lt; needed_points, check additional_num rounds</span>
+                <span class="c1"># and if you can execute action right now</span>
+                <span class="n">additional_missing_points</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ava_points</span> <span class="o">+</span> <span class="n">points_per_round</span> <span class="o">-</span> <span class="n">points_needed</span><span class="p">)</span>
+                <span class="n">additional_num_of_rounds_to_wait</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">additional_missing_points</span> <span class="o">/</span> <span class="n">points_per_round</span><span class="p">)</span>
+                <span class="c1"># Amount of points that are not used while waiting for the points to do the desired action</span>
+                <span class="n">too_much_points</span> <span class="o">=</span> <span class="n">additional_num_of_rounds_to_wait</span> <span class="o">*</span> <span class="n">points_per_round</span> <span class="o">-</span> <span class="n">additional_missing_points</span>
+                <span class="k">if</span> <span class="n">ava_points</span> <span class="o">&gt;=</span> <span class="n">too_much_points</span><span class="p">:</span>
+                    <span class="c1"># If the points, that are going to be too much later, are already available, use them</span>
+                    <span class="c1"># Simply search for best city action whereby needed points is adapted</span>
+                    <span class="c1"># As &quot;Next round, only the points that are not too much + the default points per round are needed&quot;</span>
+                    <span class="n">tmp_points_needed</span> <span class="o">=</span> <span class="n">points_per_round</span> <span class="o">+</span> <span class="p">(</span><span class="n">ava_points</span> <span class="o">-</span> <span class="n">too_much_points</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">ava_points</span><span class="p">,</span> <span class="n">points_needed</span><span class="o">=</span><span class="n">tmp_points_needed</span><span class="p">)</span>
+
+                <span class="c1"># If the overflow of points does not happen in this round,</span>
+                <span class="c1"># the following executions of the code in the next round will catch the points and spend them</span>
+                <span class="c1"># Hence we can just end the round here</span>
+                <span class="c1"># same case as if we have to wait the num of round and are not allowed to spend any of it</span>
+                <span class="k">return</span> <span class="p">[(</span><span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="c1"># if pointer_per_round &gt;= needed_points, spend all ava_points</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_action_for_points</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gameplan.select_action_for_points"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.select_action_for_points">[docs]</a>    <span class="k">def</span> <span class="nf">select_action_for_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Logic for spending the specified amount of points</span>
+<span class="sd">        :param points: points to spend</span>
+<span class="sd">        :return: list of best possible actions for the specified number of points</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_list_len</span><span class="p">):</span>
+            <span class="n">most_important_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_city_action</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">most_important_action_rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_city_action</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="c1"># Basic idea</span>
+            <span class="k">if</span> <span class="n">most_important_action</span><span class="o">.</span><span class="n">costs</span> <span class="o">&lt;=</span> <span class="n">points</span> <span class="ow">or</span> <span class="n">most_important_action</span><span class="o">.</span><span class="n">recalculate_costs_for_points</span><span class="p">(</span>
+                    <span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">costs</span> <span class="o">&lt;=</span> <span class="n">points</span><span class="p">:</span>
+                <span class="c1"># Do most important if possible</span>
+                <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">most_important_action</span><span class="p">,</span> <span class="n">most_important_action_rank</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Recalculate for actions (only changes the value if it would become due to the adjustment)</span>
+                <span class="n">recalc_actions</span> <span class="o">=</span> <span class="p">[(</span><span class="n">action</span><span class="o">.</span><span class="n">recalculate_costs_for_points</span><span class="p">(</span><span class="n">points</span><span class="p">),</span> <span class="n">importance</span><span class="p">)</span>
+                                  <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">importance</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_city_action</span><span class="p">]</span>
+                <span class="c1"># Find best possible action in list for points whereby reduce mobility action costs are fitted</span>
+                <span class="n">possible_actions_for_points</span> <span class="o">=</span> <span class="p">[(</span><span class="n">action</span><span class="p">,</span> <span class="n">importance</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">importance</span><span class="p">)</span> <span class="ow">in</span> <span class="n">recalc_actions</span>
+                                               <span class="k">if</span> <span class="n">action</span><span class="o">.</span><span class="n">costs</span> <span class="o">&lt;=</span> <span class="n">points</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">possible_actions_for_points</span><span class="p">:</span>
+                    <span class="c1"># Return most important of these actions</span>
+                    <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">possible_actions_for_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">possible_actions_for_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Not enough points for any action</span>
+                    <span class="n">rank</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">result_list</span><span class="p">:</span>
+                        <span class="n">rank</span> <span class="o">=</span> <span class="n">result_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.8</span>
+                    <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">(),</span> <span class="n">rank</span><span class="p">))</span>
+
+            <span class="c1"># Remove element from list</span>
+            <span class="n">selected_action</span> <span class="o">=</span> <span class="n">result_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">selected_action</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;endRound&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remove_element_from_list</span><span class="p">(</span><span class="n">selected_action</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_list</span></div>
+
+<div class="viewcode-block" id="Gameplan.get_action_for_candidate_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_action_for_candidate_cities">[docs]</a>    <span class="k">def</span> <span class="nf">get_action_for_candidate_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidate_cities</span><span class="p">,</span> <span class="n">points_to_spend</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the best action for cities infected with a low duration pathogen</span>
+<span class="sd">        :param candidate_cities: list of cities which could be isolated</span>
+<span class="sd">        :param points_to_spend: points allowed to be spend</span>
+<span class="sd">        :return: One or multiple actions depending on the amount of candidate cities</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># sort for biggest city first</span>
+        <span class="n">candidate_cities</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">population</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Sort for most important pathogen</span>
+        <span class="n">candidate_cities</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">candidate_cities</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">compute_pathogen_importance</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># List return in this case (can be 1)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">city</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">candidate_cities</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">tmp_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_action_for_mobile_city</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">points_to_spend</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">tmp_action</span><span class="p">:</span>
+                <span class="n">tmp_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">points_to_spend</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tmp_action</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">index</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Gameplan.get_action_for_isolated_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_action_for_isolated_cities">[docs]</a>    <span class="k">def</span> <span class="nf">get_action_for_isolated_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">isolated_cities</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">,</span> <span class="n">saved_points</span><span class="p">):</span>
+
+        <span class="n">ava_points</span> <span class="o">=</span> <span class="n">saved_points</span> <span class="o">+</span> <span class="n">ava_points</span>
+
+        <span class="n">still_isolated</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">isolated_cities</span> <span class="k">if</span> <span class="n">city</span><span class="o">.</span><span class="n">under_quarantine</span> <span class="ow">or</span> <span class="n">city</span><span class="o">.</span><span class="n">airport_closed</span><span class="p">]</span>
+        <span class="n">no_isolation_present</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">isolated_cities</span> <span class="k">if</span> <span class="n">city</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">still_isolated</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">still_isolated</span><span class="p">:</span>
+            <span class="c1"># all isolated cities are still isolated - hence get points to keep them isolated next round</span>
+            <span class="n">points_needed_in_future</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="o">.</span><span class="n">get_costs</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">ava_points</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points_per_round</span> <span class="o">&gt;=</span> <span class="n">points_needed_in_future</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">no_isolation_present</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_action_for_no_isolation_present</span><span class="p">(</span><span class="n">no_isolation_present</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">,</span> <span class="n">saved_points</span><span class="p">)</span>
+
+                <span class="c1"># # Additional puffer</span>
+                <span class="n">points_needed_in_future</span> <span class="o">*=</span> <span class="mi">2</span>
+
+                <span class="n">pats_isolated</span> <span class="o">=</span> <span class="p">[</span><span class="n">city</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="n">isolated_cities</span><span class="p">]</span>
+                <span class="c1"># more points than needed in future, do something with them</span>
+                <span class="n">rest_points</span> <span class="o">=</span> <span class="n">ava_points</span> <span class="o">-</span> <span class="n">points_needed_in_future</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">points_per_round</span>
+                <span class="c1"># Get global actions which are cheap enough and of a different pathogen</span>
+                <span class="n">global_actions</span> <span class="o">=</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">plan_global_action</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rest_points</span><span class="p">),</span> <span class="n">rank</span><span class="p">)</span>
+                                  <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span> <span class="k">if</span>
+                                  <span class="n">action</span><span class="o">.</span><span class="n">costs</span> <span class="o">&lt;=</span> <span class="n">rest_points</span> <span class="ow">and</span> <span class="n">action</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pats_isolated</span><span class="p">]</span>
+                <span class="c1"># Get action list for city</span>
+                <span class="n">action_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">ava_points</span><span class="p">,</span> <span class="n">points_needed</span><span class="o">=</span><span class="n">points_needed_in_future</span><span class="p">)</span>
+
+                <span class="c1"># Needed for later</span>
+                <span class="n">med_or_vac_in_list</span> <span class="o">=</span> <span class="p">[</span><span class="nb">bool</span><span class="p">(</span><span class="n">action</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;deployVaccine&#39;</span><span class="p">,</span> <span class="s1">&#39;deployMedication&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span>
+                                      <span class="ow">in</span> <span class="n">action_list</span><span class="p">]</span>
+
+                <span class="c1"># Check if global action might be a better idea</span>
+                <span class="k">if</span> <span class="n">global_actions</span> <span class="ow">and</span> <span class="p">(</span><span class="kc">True</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">med_or_vac_in_list</span><span class="p">):</span>
+                    <span class="c1"># if 20 or more points try a global action</span>
+                    <span class="c1"># (global action list would be empty if less than 20 points and thus also considered like this)</span>
+                    <span class="n">action_list</span> <span class="o">=</span> <span class="n">global_actions</span>
+
+                <span class="k">return</span> <span class="n">action_list</span>
+
+            <span class="c1"># need more points, hence wait for them</span>
+            <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_action_for_no_isolation_present</span><span class="p">(</span><span class="n">no_isolation_present</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">,</span> <span class="n">saved_points</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gameplan.get_action_for_no_isolation_present"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_action_for_no_isolation_present">[docs]</a>    <span class="k">def</span> <span class="nf">get_action_for_no_isolation_present</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">no_isolation_present</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">,</span> <span class="n">saved_points</span><span class="p">):</span>
+        <span class="c1"># Sort for most important pathogen</span>
+        <span class="n">city</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">no_isolation_present</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">compute_pathogen_importance</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">outbreak</span><span class="o">.</span><span class="n">pathogen</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">tmp_num_rounds</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tmp_num_rounds</span><span class="p">:</span>
+            <span class="c1"># Put under quarantine possible</span>
+            <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">tmp_num_rounds</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">ava_points</span> <span class="o">-</span> <span class="n">saved_points</span><span class="p">)</span></div>
+
+    <span class="c1"># Specifics for Global actions</span>
+<div class="viewcode-block" id="Gameplan.get_action_for_global_actions"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_action_for_global_actions">[docs]</a>    <span class="k">def</span> <span class="nf">get_action_for_global_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the best global action or the best action to perform this global action in the future</span>
+<span class="sd">        :param ava_points: points to spend</span>
+<span class="sd">        :return: Action object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tmp_var_developing</span><span class="p">,</span> <span class="n">tmp_var_developed</span><span class="p">,</span> <span class="n">tmp_var_developing_or_developed</span><span class="p">,</span> \
+            <span class="n">tmp_developed_state_dict</span><span class="p">,</span> <span class="n">tmp_overall_state_dict</span><span class="p">,</span> \
+            <span class="n">tmp_every_pat_has_dev</span><span class="p">,</span> <span class="n">tmp_any_pat_has_ava</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pat_state</span><span class="p">()</span>
+
+        <span class="c1"># If for every pathogen something is developing and nothing is already developed</span>
+        <span class="k">if</span> <span class="n">tmp_every_pat_has_dev</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tmp_any_pat_has_ava</span><span class="p">:</span>
+            <span class="c1"># just save the points to deploy once everything is developed</span>
+            <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()</span>
+
+        <span class="c1"># If at least one medication or vaccine is still developing</span>
+        <span class="k">if</span> <span class="n">tmp_var_developing</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">tmp_var_developing_or_developed</span><span class="p">:</span>
+                <span class="c1"># and each pathogen has a medication or a vaccine in development or already developed</span>
+                <span class="c1"># Do best city action</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span>
+
+            <span class="c1"># or and not each pathogen has a medication or a vaccine in development or already developed</span>
+            <span class="c1"># Do best global action (i.e. develop a medication or vaccine for a so far not considered pathogen</span>
+            <span class="c1"># Filter out actions for pathogens which are already developing or developed</span>
+            <span class="n">filtered_global_actions</span> <span class="o">=</span> <span class="p">[(</span><span class="n">tmp_action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">tmp_action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span>
+                                       <span class="k">if</span> <span class="ow">not</span> <span class="n">tmp_overall_state_dict</span><span class="p">[</span><span class="n">tmp_action</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]]]</span>
+            <span class="c1"># Resulting list can not be empty since this would result in the previous if being true,</span>
+            <span class="c1"># further order is preserved</span>
+            <span class="c1"># Thus simply get new most important by taking the first one</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">plan_global_action</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">),</span> <span class="n">rank</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="n">filtered_global_actions</span><span class="p">]</span>
+
+        <span class="c1"># If non is currently developing</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tmp_var_developed</span><span class="p">:</span>
+            <span class="c1"># and not each pathogen has either medication or vaccine developed</span>
+            <span class="n">filtered_global_actions</span> <span class="o">=</span> <span class="p">[(</span><span class="n">tmp_action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">tmp_action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span>
+                                       <span class="k">if</span> <span class="ow">not</span> <span class="n">tmp_developed_state_dict</span><span class="p">[</span><span class="n">tmp_action</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]]]</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">plan_global_action</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">),</span> <span class="n">rank</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="n">filtered_global_actions</span><span class="p">]</span>
+
+        <span class="c1"># Dynamic cap which is maxed at 3 rounds - defines when another global action should be performed</span>
+        <span class="c1"># A pat is in need of a global action if medi/vaci is needed but not available</span>
+        <span class="n">pat_in_need_of_global_action</span> <span class="o">=</span> <span class="p">[</span><span class="n">pat</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_in_cities</span> <span class="k">if</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">dev_needed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pat</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                                        <span class="o">&gt;=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pat</span><span class="p">)))]</span>
+        <span class="n">filtered_global_actions</span> <span class="o">=</span> <span class="p">[</span><span class="n">global_action</span> <span class="k">for</span> <span class="n">global_action</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span>
+                                   <span class="k">if</span> <span class="n">global_action</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">pat_in_need_of_global_action</span><span class="p">]</span>
+        <span class="c1"># Check whether a global action for a pathogen exists which is in need of action</span>
+        <span class="k">if</span> <span class="n">pat_in_need_of_global_action</span> <span class="ow">and</span> <span class="n">filtered_global_actions</span><span class="p">:</span>
+            <span class="c1"># Special trigger</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">plan_global_action</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">),</span> <span class="n">rank</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="n">filtered_global_actions</span><span class="p">]</span>
+
+        <span class="c1"># if self.game.last_development_finished_since &gt;= len(self.game.pathogens_in_cities)*2:</span>
+        <span class="c1"># if self.game.last_development_finished_since &gt;= 1:</span>
+        <span class="c1"># if self.game.last_development_finished_since &gt;= 3:</span>
+        <span class="c1"># if self.game.last_development_finished_since &gt;= 6:</span>
+        <span class="c1"># 5</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">last_development_finished_since</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># TODO: Possible improvement: extend features to use for dynamic max and create exceptions</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">plan_global_action</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">),</span> <span class="n">rank</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_global_actions</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">ava_points</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gameplan.plan_global_action"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.plan_global_action">[docs]</a>    <span class="k">def</span> <span class="nf">plan_global_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_action</span><span class="p">,</span> <span class="n">ava_points</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &#39;Schedules&quot; to return the desired global action, if enough points available, it will be returned immediately</span>
+<span class="sd">        if not either the round will be ended</span>
+<span class="sd">        or an action using the points that are not used is played such that next round this action is still possible</span>
+<span class="sd">        :param global_action: a global action which is ready to be build</span>
+<span class="sd">        :param ava_points: point allowed to use</span>
+<span class="sd">        :return: action to perform to achieve doing this action now or later</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">global_action</span>
+        <span class="c1"># get costs - no need to check other get_costs instances since all global actions have constant costs</span>
+        <span class="n">costs</span> <span class="o">=</span> <span class="n">global_action</span><span class="o">.</span><span class="n">get_costs</span><span class="p">()</span>
+
+        <span class="c1"># Check if selected global action is possible</span>
+        <span class="k">if</span> <span class="n">ava_points</span> <span class="o">&lt;</span> <span class="n">costs</span><span class="p">:</span>
+            <span class="c1"># If not, select an action that makes it possible when just waiting next time</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_city_action</span><span class="p">(</span><span class="n">ava_points</span><span class="p">,</span> <span class="n">points_needed</span><span class="o">=</span><span class="n">costs</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># This works because the select action will see that no points to play exists in the 2nd time triggering</span>
+            <span class="c1"># and thus just ends the round</span>
+
+        <span class="k">return</span> <span class="n">action</span></div>
+
+    <span class="c1"># Utils</span>
+<div class="viewcode-block" id="Gameplan.get_duration_candidate_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_duration_candidate_cities">[docs]</a>    <span class="k">def</span> <span class="nf">get_duration_candidate_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a list of cities which have a small duration and either very small population or high population</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">candidate_cities</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_in_cities</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">city</span><span class="o">.</span><span class="n">airport_closed</span> <span class="ow">or</span> <span class="n">city</span><span class="o">.</span><span class="n">under_quarantine</span><span class="p">):</span>
+                        <span class="n">candidate_cities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">city</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">candidate_cities</span></div>
+
+<div class="viewcode-block" id="Gameplan.get_isolated_cities"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_isolated_cities">[docs]</a>    <span class="k">def</span> <span class="nf">get_isolated_cities</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get cities which need to be isolated</span>
+<span class="sd">        :return: List[City]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">isolated_cities</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">pathogen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pathogens_in_cities</span><span class="p">:</span>
+            <span class="c1"># only cities with mob higher 0 are important because mob 0 pats are and will be isolated for ever mostly</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span> \
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pat_state_dict</span><span class="p">[</span><span class="n">pathogen</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;any_action&#39;</span><span class="p">]</span> \
+                    <span class="ow">and</span> <span class="p">((</span><span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                    <span class="n">pathogen</span><span class="o">.</span><span class="n">duration</span> <span class="o">&gt;=</span> <span class="mf">0.5</span> <span class="ow">and</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">lethality</span> <span class="o">&gt;=</span> <span class="mf">0.75</span><span class="p">)):</span>
+                <span class="c1"># and not self.game.pat_state_dict[pathogen.name][&#39;any_action&#39;]</span>
+
+                <span class="c1"># Get new infected or isolated city</span>
+                <span class="n">tmp_city</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">get_cities_with_pathogen</span><span class="p">(</span><span class="n">pathogen</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="c1"># Prevent a city from being put into the list if it has no way of becoming not-isolated by itself</span>
+                <span class="n">neighbor_infected_state</span> <span class="o">=</span> <span class="p">[</span><span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">cities</span><span class="p">[</span><span class="n">city_name</span><span class="p">]</span><span class="o">.</span><span class="n">outbreak</span><span class="p">)</span> <span class="k">for</span> <span class="n">city_name</span> <span class="ow">in</span>
+                                           <span class="n">tmp_city</span><span class="o">.</span><span class="n">open_connections</span><span class="p">]</span>
+                <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">neighbor_infected_state</span> <span class="ow">or</span> <span class="kc">False</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">neighbor_infected_state</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pathogen</span><span class="o">.</span><span class="n">mobility</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="n">isolated_cities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp_city</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">isolated_cities</span></div>
+
+<div class="viewcode-block" id="Gameplan.get_pat_state"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_pat_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_pat_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Collect a list of features about the current pat state</span>
+<span class="sd">        :return: Features about pat state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get features needed for decisions below</span>
+        <span class="c1"># Tmp var for medi or vac is developing for at least one pathogen</span>
+        <span class="n">tmp_var_developing</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">tmp_var_developed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># Tmp var for medi or vac is developing/developed for at least one pathogen</span>
+        <span class="n">tmp_var_developing_or_developed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">tmp_overall_state_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">tmp_developed_state_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># tmp var</span>
+        <span class="n">tmp_every_pat_has_dev</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">tmp_any_pat_has_ava</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">pat_name</span><span class="p">,</span> <span class="n">state_dict</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">game</span><span class="o">.</span><span class="n">pat_state_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">developing_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;mDev&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;vDev&#39;</span><span class="p">])</span>
+            <span class="n">developed_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;mAva&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;vAva&#39;</span><span class="p">])</span>
+            <span class="n">overall_state</span> <span class="o">=</span> <span class="p">(</span><span class="n">developing_state</span> <span class="ow">or</span> <span class="n">developed_state</span><span class="p">)</span>
+            <span class="c1"># Save for later</span>
+            <span class="n">tmp_developed_state_dict</span><span class="p">[</span><span class="n">pat_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">developed_state</span>
+            <span class="n">tmp_overall_state_dict</span><span class="p">[</span><span class="n">pat_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">overall_state</span>
+            <span class="c1"># Becomes true if at least one is developing</span>
+            <span class="n">tmp_var_developing</span> <span class="o">=</span> <span class="n">tmp_var_developing</span> <span class="ow">or</span> <span class="n">developing_state</span>
+            <span class="c1"># Stays true if every pas has either medication or vaccine developed</span>
+            <span class="n">tmp_var_developed</span> <span class="o">=</span> <span class="n">tmp_var_developed</span> <span class="ow">and</span> <span class="n">developed_state</span>
+            <span class="c1"># Stays True if every pat has at least medication or vaccine developing or developed</span>
+            <span class="n">tmp_var_developing_or_developed</span> <span class="o">=</span> <span class="n">tmp_var_developing_or_developed</span> <span class="ow">and</span> <span class="n">overall_state</span>
+            <span class="c1"># Other</span>
+            <span class="n">tmp_every_pat_has_dev</span> <span class="o">=</span> <span class="n">tmp_every_pat_has_dev</span> <span class="ow">and</span> <span class="n">developing_state</span>
+            <span class="n">tmp_any_pat_has_ava</span> <span class="o">=</span> <span class="n">tmp_any_pat_has_ava</span> <span class="ow">or</span> <span class="n">developed_state</span>
+
+        <span class="k">return</span> <span class="n">tmp_var_developing</span><span class="p">,</span> <span class="n">tmp_var_developed</span><span class="p">,</span> <span class="n">tmp_var_developing_or_developed</span><span class="p">,</span> \
+            <span class="n">tmp_developed_state_dict</span><span class="p">,</span> <span class="n">tmp_overall_state_dict</span><span class="p">,</span> <span class="n">tmp_every_pat_has_dev</span><span class="p">,</span> <span class="n">tmp_any_pat_has_ava</span></div>
+
+<div class="viewcode-block" id="Gameplan.get_action_for_mobile_city"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.get_action_for_mobile_city">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_action_for_mobile_city</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">points_to_spend</span><span class="p">):</span>
+        <span class="n">max_rounds_for_points</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="n">points_to_spend</span><span class="p">)</span>
+        <span class="n">max_rounds_for_points_airport</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">CloseAirport</span><span class="o">.</span><span class="n">get_max_rounds</span><span class="p">(</span><span class="n">points_to_spend</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">max_rounds_for_points</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">max_rounds_for_points_airport</span><span class="p">:</span>
+            <span class="c1"># Nothing possible</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="c1"># No need to check if already closed/under quarantine since first round)</span>
+
+        <span class="k">if</span> <span class="n">max_rounds_for_points</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">PutUnderQuarantine</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_rounds_for_points</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">city</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">actions</span><span class="o">.</span><span class="n">CloseAirport</span><span class="p">(</span><span class="n">city</span><span class="p">,</span> <span class="n">max_rounds_for_points_airport</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gameplan.remove_element_from_list"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.gameplan.Gameplan.remove_element_from_list">[docs]</a>    <span class="k">def</span> <span class="nf">remove_element_from_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected_action</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Removes selected action element from action list</span>
+<span class="sd">        :param selected_action: action</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">action_tuple</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_city_action</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">action_tuple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">action</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;closeConnection&#39;</span><span class="p">:</span>
+                <span class="n">city</span> <span class="o">=</span> <span class="n">action</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;fromCity&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">city</span> <span class="o">=</span> <span class="n">action</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">selected_action</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;closeConnection&#39;</span><span class="p">:</span>
+                <span class="n">selected_city</span> <span class="o">=</span> <span class="n">selected_action</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;fromCity&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">selected_city</span> <span class="o">=</span> <span class="n">selected_action</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">action</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">selected_action</span><span class="o">.</span><span class="n">type</span> <span class="ow">and</span> <span class="n">city</span> <span class="o">==</span> <span class="n">selected_city</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sorted_city_action</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">action_tuple</span><span class="p">)</span>
+                <span class="k">break</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.heuristics.human.human &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.heuristics.human.human</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Human heuristic</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">from</span> <span class="nn">heilung.models</span> <span class="kn">import</span> <span class="n">Game</span><span class="p">,</span> <span class="n">actions</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">h_utils</span>
+<span class="kn">from</span> <span class="nn">.gameplan</span> <span class="kn">import</span> <span class="n">Gameplan</span>
+<span class="kn">from</span> <span class="nn">.stateheuristic</span> <span class="kn">import</span> <span class="n">Stateheuristic</span>
+
+
+<div class="viewcode-block" id="get_decision"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.human.human.get_decision">[docs]</a><span class="k">def</span> <span class="nf">get_decision</span><span class="p">(</span><span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get decision for the human heuristic - main entry point</span>
+<span class="sd">    :param game: Game Object</span>
+<span class="sd">    :return: List[Action]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Init</span>
+    <span class="n">game</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
+    <span class="n">stateheuristic</span> <span class="o">=</span> <span class="n">Stateheuristic</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
+
+    <span class="c1"># Simple shortcut to avoid recomputing everything in this case</span>
+    <span class="c1"># because action list would consist only of this element in the end</span>
+    <span class="k">if</span> <span class="n">game</span><span class="o">.</span><span class="n">points</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">actions</span><span class="o">.</span><span class="n">EndRound</span><span class="p">()]</span>  <span class="c1"># if decide to add value: (actions.EndRound(), 1.0)</span>
+
+    <span class="c1"># Rank of each global action (Scaled to 0-1 whereby most important is 1)</span>
+    <span class="n">ranked_global_actions</span> <span class="o">=</span> <span class="n">stateheuristic</span><span class="o">.</span><span class="n">rank_global_actions</span><span class="p">()</span>
+
+    <span class="c1"># Rank of each city (Scaled to 0-1 whereby most important is 1)</span>
+    <span class="n">city_ranks</span> <span class="o">=</span> <span class="n">stateheuristic</span><span class="o">.</span><span class="n">rank_cities</span><span class="p">()</span>
+
+    <span class="c1"># Rank of each action per city (Scaled to 0-1 for each city whereby most important = 1)</span>
+    <span class="n">ranked_city_actions_per_city</span> <span class="o">=</span> <span class="n">stateheuristic</span><span class="o">.</span><span class="n">rank_actions_for_cities</span><span class="p">()</span>
+
+    <span class="c1"># Combine ranks of city and actions for cities to have one flat list</span>
+    <span class="n">combined_ranks</span> <span class="o">=</span> <span class="n">h_utils</span><span class="o">.</span><span class="n">compute_combined_importance</span><span class="p">(</span><span class="n">city_ranks</span><span class="p">,</span> <span class="n">ranked_city_actions_per_city</span><span class="p">)</span>
+
+    <span class="c1"># Init Gameplan</span>
+    <span class="n">gameplan</span> <span class="o">=</span> <span class="n">Gameplan</span><span class="p">(</span><span class="n">game</span><span class="p">,</span> <span class="n">combined_ranks</span><span class="p">,</span> <span class="n">ranked_global_actions</span><span class="p">,</span> <span class="n">stateheuristic</span><span class="o">.</span><span class="n">weighted_pathogens</span><span class="p">,</span>
+                        <span class="n">stateheuristic</span><span class="o">.</span><span class="n">dev_needed</span><span class="p">)</span>
+
+    <span class="c1"># Build a list of actions whereby the first one is most important</span>
+    <span class="n">action_list</span> <span class="o">=</span> <span class="n">gameplan</span><span class="o">.</span><span class="n">build_action_list</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">action_list</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

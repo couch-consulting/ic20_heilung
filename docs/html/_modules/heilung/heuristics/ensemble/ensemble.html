@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>heilung.heuristics.ensemble.ensemble &#8212; Strohristik Heilung IC2020 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for heilung.heuristics.ensemble.ensemble</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">heilung.models</span> <span class="kn">import</span> <span class="n">Action</span><span class="p">,</span> <span class="n">Game</span>
+
+<span class="kn">from</span> <span class="nn">..human</span> <span class="kn">import</span> <span class="n">human</span>
+<span class="kn">from</span> <span class="nn">..stupid</span> <span class="kn">import</span> <span class="n">StupidHeuristic</span>
+
+
+<div class="viewcode-block" id="same"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.ensemble.ensemble.same">[docs]</a><span class="k">def</span> <span class="nf">same</span><span class="p">(</span><span class="n">action_1</span><span class="p">:</span> <span class="n">Action</span><span class="p">,</span> <span class="n">action_2</span><span class="p">:</span> <span class="n">Action</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Evaluates two actions whether they are the same</span>
+<span class="sd">    Also includes options such as city and and treated pathogen</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        action_1 {Action} -- Action A to compare</span>
+<span class="sd">        action_2 {Action} -- Action B to compare</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool -- Are they the same</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">action_1</span> <span class="ow">and</span> <span class="n">action_2</span> <span class="ow">and</span> <span class="n">action_1</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">action_2</span><span class="o">.</span><span class="n">type</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">action_1</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;endRound&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">action_1</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;developMedication&#39;</span><span class="p">,</span> <span class="s1">&#39;developVaccine&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">action_1</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">action_2</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;pathogen&#39;</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">action_1</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;closeConnection&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">action_1</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;fromCity&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">action_2</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;fromCity&#39;</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">action_1</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">action_2</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="compute_combined_rank"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.ensemble.ensemble.compute_combined_rank">[docs]</a><span class="k">def</span> <span class="nf">compute_combined_rank</span><span class="p">(</span><span class="n">rl_1</span><span class="p">,</span> <span class="n">rl_2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;[For two given lists, calculates the rank of every action in response list 1 by  increasing the action rank if it is also in response list 2</span>
+<span class="sd">     Inputs list are stored such that the first element is most important]</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        rl_1 {List[Action]} -- List of action which shall be increased</span>
+<span class="sd">        rl_2 {List[Action]} -- List of action which are used to increase the rank</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[Tuple[Action, int]] -- List of tuples of actions with a rank</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">new_action_rank_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">indx_1</span><span class="p">,</span> <span class="n">tmp_action_1</span><span class="p">,</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">rl_1</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">tmp_action_rank</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">indx_1</span>
+
+        <span class="k">for</span> <span class="n">indx_2</span><span class="p">,</span> <span class="n">tmp_action_2</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">rl_2</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">same</span><span class="p">(</span><span class="n">tmp_action_1</span><span class="p">,</span> <span class="n">tmp_action_2</span><span class="p">):</span>
+                <span class="n">tmp_action_rank</span> <span class="o">+=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">indx_2</span>
+
+        <span class="n">new_action_rank_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tmp_action_1</span><span class="p">,</span> <span class="n">tmp_action_rank</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">new_action_rank_list</span></div>
+
+
+<div class="viewcode-block" id="merge_lists"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.ensemble.ensemble.merge_lists">[docs]</a><span class="k">def</span> <span class="nf">merge_lists</span><span class="p">(</span><span class="n">rl_1</span><span class="p">,</span> <span class="n">rl_2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Merges lists of actions such that if an action is in both lists, the higher rank is inserted with that action and only unique entries are present</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        rl_1 {List[Tuple[Action, int]]} -- Ranked list of actions</span>
+<span class="sd">        rl_2 {List[Tuple[Action, int]]} -- [description]</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[Tuple[Action, int]] -- Merged list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span> <span class="ow">in</span> <span class="n">rl_1</span><span class="p">:</span>
+        <span class="n">no_similar_exists</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">indx</span><span class="p">,</span> <span class="p">(</span><span class="n">tmp_action</span><span class="p">,</span> <span class="n">tmp_rank</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">rl_2</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">same</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">tmp_action</span><span class="p">):</span>
+                <span class="c1"># If same</span>
+                <span class="k">if</span> <span class="n">rank</span> <span class="o">&gt;</span> <span class="n">tmp_rank</span><span class="p">:</span>
+                    <span class="c1"># If rank is better, store in list bias stupid</span>
+                    <span class="n">rl_2</span><span class="p">[</span><span class="n">indx</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">tmp_action</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span>
+                <span class="n">no_similar_exists</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="n">no_similar_exists</span><span class="p">:</span>
+            <span class="n">rl_2</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">action</span><span class="p">,</span> <span class="n">rank</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">rl_2</span></div>
+
+
+<div class="viewcode-block" id="get_decision"><a class="viewcode-back" href="../../../../index.html#heilung.heuristics.ensemble.ensemble.get_decision">[docs]</a><span class="k">def</span> <span class="nf">get_decision</span><span class="p">(</span><span class="n">game</span><span class="p">:</span> <span class="n">Game</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Action</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Implements the heuristic interface taking the gamestate</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        game {Game} -- Current state of the game</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Action -- Action to execute</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stupid</span> <span class="o">=</span> <span class="n">StupidHeuristic</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
+    <span class="n">stupid_rl</span> <span class="o">=</span> <span class="n">stupid</span><span class="o">.</span><span class="n">get_decision</span><span class="p">()</span>
+    <span class="n">human_rl</span> <span class="o">=</span> <span class="n">human</span><span class="o">.</span><span class="n">get_decision</span><span class="p">(</span><span class="n">game</span><span class="p">)</span>
+
+    <span class="n">list_human</span> <span class="o">=</span> <span class="n">compute_combined_rank</span><span class="p">(</span><span class="n">human_rl</span><span class="p">,</span> <span class="n">stupid_rl</span><span class="p">)</span>
+    <span class="n">list_stupid</span> <span class="o">=</span> <span class="n">compute_combined_rank</span><span class="p">(</span><span class="n">stupid_rl</span><span class="p">,</span> <span class="n">human_rl</span><span class="p">)</span>
+
+    <span class="n">merged_list</span> <span class="o">=</span> <span class="n">merge_lists</span><span class="p">(</span><span class="n">list_human</span><span class="p">,</span> <span class="n">list_stupid</span><span class="p">)</span>
+
+    <span class="c1"># Sort for best</span>
+    <span class="n">merged_list</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Return most important value</span>
+    <span class="k">return</span> <span class="n">merged_list</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">Strohristik Heilung IC2020</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Lennart Purucker, Thore Kruess.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
