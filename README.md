@@ -35,7 +35,7 @@ buildah build-using-dockerfile -t heilung .
 
 Das dadurch generierte Image ist so konfiguriert standardmäßig Port 8080 weiterzuleiten.
 Auf diesen ist auch die Anwendung konfiguriert.
-Eine Container Runtime (z.B. docker oder podman) muss daher mit den Parametern `-P` oder `-p <local-port>:8080`.
+Eine Container Runtime (z.B. docker oder podman) muss daher mit den Parametern `-P` oder `-p <local-port>:8080` werden.
 
 ```bash
 sudo podman run -dt -p 50123:8080 couchconsulting/ic20
