@@ -1,10 +1,7 @@
 # Strohristik Heilung IC2020
 
-Vielen Dank, dass Sie sich für Strohristik HEILUNG IC2020 entschieden haben.
-Es handelt sich dabei um ein Produkt herausragender Qualität.
-
-Wir hoffen, dass Sie sehr viel Freude mit Ihrem Strohristik HEILUNG IC2020 haben werden.
-Um diese möglichst lange zu erhalten lesen Sie unbedingt folgende Hinweise.
+Beitrag zum [informatiCup 2020](https://github.com/informatiCup/informatiCup2020).
+Implementierung einer Heuristik, die versucht in einem Spiel ausbrechende Pathogene so effektiv wie möglich zu bekämpfen.
 
 ## Setup
 
