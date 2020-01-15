@@ -7,6 +7,8 @@ import time
 
 import requests
 
+BASEPATH = os.path.dirname(os.path.dirname(__file__))
+
 parser = argparse.ArgumentParser(
     description='Helper Script to run server and client')
 parser.add_argument('--client-path', type=str,
@@ -26,7 +28,7 @@ seed = args.seed
 base_url = 'http://localhost:' + args.port
 
 # Parse args and build flask startup
-subprocess_cmd = ['python', '../../server.py',
+subprocess_cmd = ['python', BASEPATH + '/server.py',
                   '--seed', seed, '--port', args.port]
 if args.silent:
     subprocess_cmd.append('--silent')
@@ -49,7 +51,7 @@ with subprocess.Popen(subprocess_cmd) as proc:
     # Loop in case of test
     for i in range(args.epochs):
         # Remove observer.json before run, because the observer would just append otherwise.
-        observer_path = f'../../observations/observer-{seed}.json'
+        observer_path = f'{BASEPATH}/observations/observer-{seed}.json'
         if os.path.isfile(observer_path):
             os.remove(observer_path)
         # Play game

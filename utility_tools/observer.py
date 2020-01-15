@@ -1,8 +1,10 @@
 import json
-from os.path import isfile
+from os.path import isfile, dirname
 
 from heilung.models.action import Action
 from heilung.models.game import Game
+
+BASEPATH = dirname(dirname(__file__))
 
 
 class Observer:
@@ -54,8 +56,8 @@ class Observer:
     def load_state(self):
         """load the last observations from disk
         """
-        if isfile(f'observations/observer-{self.seed}.json'):
-            with open(f'observations/observer-{self.seed}.json', 'r') as f:
+        if isfile(f'{BASEPATH}/observations/observer-{self.seed}.json'):
+            with open(f'{BASEPATH}/observations/observer-{self.seed}.json', 'r') as f:
                 data = json.load(f)
                 self.encountered_pathogens = data['encountered_pathogens']
                 self.encountered_happenings = data['encountered_happenings']
@@ -68,7 +70,7 @@ class Observer:
     def save_state(self):
         """Save observations to disk
         """
-        with open(f'observations/observer-{self.seed}.json', 'w') as f:
+        with open(f'{BASEPATH}/observations/observer-{self.seed}.json', 'w') as f:
             data = {
                 'encountered_pathogens': self.encountered_pathogens,
                 'encountered_happenings': self.encountered_happenings,

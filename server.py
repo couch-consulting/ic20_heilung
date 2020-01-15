@@ -7,7 +7,7 @@ from heilung.heuristics.ensemble import ensemble
 from heilung.heuristics.human import human
 from heilung.heuristics.stupid import StupidHeuristic
 from heilung.models import Game
-from heilung.utility_tools.observer import Observer
+from utility_tools.observer import Observer
 
 app = Flask(__name__)
 

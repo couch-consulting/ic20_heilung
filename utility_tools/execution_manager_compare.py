@@ -7,11 +7,12 @@ import time
 
 import requests
 
+BASEPATH = os.path.dirname(os.path.dirname(__file__))
 
 def client(won_games, avg_rounds_win, avg_rounds_loss, base_url, seed, version='human'):
     requests.post(base_url + '/seed/' + seed)
     # Remove observer.json before run, because the observer would just append otherwise.
-    observer_path = f'../../observations/observer-{seed}.json'
+    observer_path = f'{BASEPATH}/observations/observer-{seed}.json'
     if os.path.isfile(observer_path):
         os.remove(observer_path)
 
@@ -48,7 +49,7 @@ heuristic_1 = args.compare[0]
 heuristic_2 = args.compare[1]
 
 # Parse args and build flask startup
-subprocess_cmd_1 = ['python', '../../server.py', '--seed', seed, '--port', args.port, '--h', heuristic_1[1]]
+subprocess_cmd_1 = ['python', BASEPATH + '/server.py', '--seed', seed, '--port', args.port, '--h', heuristic_1[1]]
 if args.silent:
     subprocess_cmd_1.append('--silent')
 if args.no_obs:
@@ -56,7 +57,7 @@ if args.no_obs:
 base_url_1 = 'http://localhost:' + args.port
 version_1 = heuristic_1[0]
 
-subprocess_cmd_2 = ['python', '../../server.py', '--seed', seed, '--port', str(int(args.port) + 1000), '--h',
+subprocess_cmd_2 = ['python', BASEPATH + '/server.py', '--seed', seed, '--port', str(int(args.port) + 1000), '--h',
                     heuristic_2[1]]
 if args.silent:
     subprocess_cmd_2.append('--silent')

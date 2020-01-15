@@ -1,3 +1,4 @@
+# Not supported anymore
 import random
 
 from heilung.models.actions import (ApplyHygienicMeasures, CallElections,
