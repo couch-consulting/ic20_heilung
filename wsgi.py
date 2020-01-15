@@ -7,7 +7,7 @@ app.config['NO_OBS'] = True
 app.config['SILENT'] = False
 
 d = PathInfoDispatcher({'/': app})
-server = WSGIServer(('0.0.0.0', 8080), d)
+server = WSGIServer(('0.0.0.0', 50123), d)
 
 if __name__ == '__main__':
     try:

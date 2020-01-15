@@ -22,7 +22,7 @@ pipenv install
 pipenv run python wsgi.py
 ```
 
-Der Server ist nun lokal auf Port 8080 erreichbar.
+Der Server ist nun lokal auf Port `50123` erreichbar.
 Eine Änderung des Ports ist durch Anpassung in der [wsgi.py](wsgi.py) möglich.
 
 ### Docker
@@ -30,15 +30,15 @@ Eine Änderung des Ports ist durch Anpassung in der [wsgi.py](wsgi.py) möglich.
 Dieses Repository enthält ein Dockerfile, welches mit Docker oder buildah gebaut werden kann.
 
 ```bash
-buildah build-using-dockerfile -t heilung .
+buildah build-using-dockerfile -t ic20 .
 ```
 
-Das dadurch generierte Image ist so konfiguriert standardmäßig Port 8080 weiterzuleiten.
+Das dadurch generierte Image ist so konfiguriert standardmäßig Port 50123 weiterzuleiten.
 Auf diesen ist auch die Anwendung konfiguriert.
-Eine Container Runtime (z.B. docker oder podman) muss daher mit den Parametern `-P` oder `-p <local-port>:8080` werden.
+Eine Container Runtime (z.B. docker oder podman) muss daher mit den Parametern `-P` oder `-p <local-port>:50123` werden.
 
 ```bash
-sudo podman run -dt -p 50123:8080 couchconsulting/ic20
+sudo podman run -dt -p 50123:50123 couchconsulting/ic20
 ```
 
 Ein bereits gebautes Image ist auf DockerHub als [`couchconsulting/ic20`](https://hub.docker.com/repository/docker/couchconsulting/ic20) verfügbar.

@@ -9,5 +9,5 @@ COPY --chown=heilung:heilung heilung heilung/
 RUN pipenv install --system
 USER heilung
 
-EXPOSE 8080
+EXPOSE 50123
 ENTRYPOINT python wsgi.py
