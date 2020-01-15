@@ -1,3 +1,43 @@
-# Heilung
+# Strohristik Heilung IC2020
 
-ic20 Contribution.
+Vielen Dank, dass Sie sich für Strohristik HEILUNG IC2020 entschieden haben.
+Es handelt sich dabei um ein Produkt herausragender Qualität.
+
+Wir hoffen, dass Sie sehr viel Freude mit Ihrem Strohristik HEILUNG IC2020 haben werden.
+Um diese möglichst lange zu erhalten lesen Sie unbedingt folgende Hinweise.
+
+## Setup
+
+Es bestehen zwei verschiedene Möglichkeiten zum Setup.
+Entweder lokal durch die Verwendung von Pipenv oder mit Hilfe von Docker.
+
+### Pipenv
+
+Für eine lokale Installation sind Python (>=3.6) und [Pipenv](https://pipenv.kennethreitz.org/en/latest/) erforderlich.
+
+Anschließend sind für eine Installation und Start des Servers folgende Befehle auszuführen.
+
+```bash
+pipenv install
+pipenv run python wsgi.py
+```
+
+Der Server ist nun lokal auf Port 8080 erreichbar.
+Eine Änderung des Ports ist durch Anpassung in der [wsgi.py](wsgi.py) möglich.
+
+### Docker
+
+Dieses Repository enthält ein Dockerfile, welches mit Docker oder buildah gebaut werden kann.
+
+```bash
+buildah build-using-dockerfile -t heilung .
+```
+
+Das dadurch generierte Image ist so konfiguriert standardmäßig Port 8080 weiterzuleiten.
+Auf diesen ist auch die Anwendung konfiguriert.
+
+Ein bereits gebautes Image ist auf DockerHub als [`couchconsulting/ic20`](https://hub.docker.com/repository/docker/couchconsulting/ic20) verfügbar.
+
+## Dokumentation
+
+Für Klassen und Methoden existiert eine [separate Dokumentation](docs/html/index.html).
