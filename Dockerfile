@@ -6,6 +6,8 @@ RUN groupadd -r heilung && useradd -r -s /bin/false -g heilung heilung
 WORKDIR /usr/src/app
 COPY --chown=heilung:heilung server.py wsgi.py Pipfile Pipfile.lock /usr/src/app/
 COPY --chown=heilung:heilung heilung heilung/
+COPY --chown=heilung:heilung utility_tools utility_tools/
+
 RUN pipenv install --system
 USER heilung
 
